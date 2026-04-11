@@ -1,0 +1,32 @@
+name: Branch Protection Check
+
+on:
+  pull_request:
+    branches: [rec, main]
+
+jobs:
+  check-source-branch:
+    name: Validate source branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check PR source for rec
+        if: github.base_ref == 'rec'
+        run: |
+          if [[ "${{ github.head_ref }}" != "dev" && ! "${{ github.head_ref }}" =~ ^hotfix/ ]]; then
+            echo "::error::PRs to 'rec' must come from 'dev' or a 'hotfix/*' branch."
+            echo "Source branch: ${{ github.head_ref }}"
+            exit 1
+          fi
+          echo "Valid: ${{ github.head_ref }} -> rec"
+
+      - name: Check PR source for main
+        if: github.base_ref == 'main'
+        run: |
+          if [[ "${{ github.head_ref }}" != "rec" && ! "${{ github.head_ref }}" =~ ^hotfix/ ]]; then
+            echo "::error::PRs to 'main' must come from 'rec' or a 'hotfix/*' branch."
+            echo "Source branch: ${{ github.head_ref }}"
+            exit 1
+          fi
+          echo "Valid: ${{ github.head_ref }} -> main"

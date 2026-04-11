@@ -1,0 +1,54 @@
+# Android
+*.iml
+.gradle/
+/local.properties
+/.idea/
+*.apk
+*.aab
+*.ap_
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+output-metadata.json
+
+# Firebase
+google-services.json
+
+# Secrets
+*.pem
+*.key
+*.jks
+*.keystore
+*.p12
+
+# Environment
+.env
+.env.*
+.env.local
+.env.production
+
+# AI tools
+.claude/
+.cursor/
+.copilot/
+
+# Product docs (not for repo)
+PRD-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+
+# Test results
+/app/build/reports/
+/app/build/test-results/
