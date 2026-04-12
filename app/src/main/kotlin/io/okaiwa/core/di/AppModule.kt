@@ -126,4 +126,10 @@ abstract class RepositoryModule {
     abstract fun bindDeviceContactsRepository(
         impl: io.okaiwa.features.contacts.data.repositories.AndroidDeviceContactsRepository
     ): io.okaiwa.features.contacts.domain.repositories.DeviceContactsRepository
+
+    @dagger.Binds
+    @Singleton
+    abstract fun bindProfileRepository(
+        impl: io.okaiwa.features.profile.data.repositories.MockProfileRepository
+    ): io.okaiwa.features.profile.domain.repositories.ProfileRepository
 }
