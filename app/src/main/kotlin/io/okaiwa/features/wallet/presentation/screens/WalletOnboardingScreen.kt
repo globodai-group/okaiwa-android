@@ -126,10 +126,10 @@ fun WalletOnboardingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    // Sit above the floating tab bar — without this
-                    // offset the lime button slid under the bar and
-                    // "Importer un wallet" was cut in half by it.
-                    .padding(bottom = floatingBarInset),
+                    // Sit above the floating tab bar with an extra 16 dp
+                    // gutter so the lime button breathes. The bar inset
+                    // alone left the CTAs visually kissing the bar.
+                    .padding(bottom = floatingBarInset + 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Button(
