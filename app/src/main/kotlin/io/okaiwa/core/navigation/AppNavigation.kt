@@ -22,6 +22,7 @@ import io.okaiwa.features.auth.presentation.screens.SplashScreen
 import io.okaiwa.features.auth.presentation.screens.WelcomeScreen
 import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
+import io.okaiwa.features.contacts.presentation.screens.ContactPickerScreen
 import io.okaiwa.features.profile.presentation.screens.ProfileScreen
 import io.okaiwa.features.settings.presentation.screens.SettingsScreen
 import io.okaiwa.features.wallet.presentation.screens.WalletOnboardingScreen
@@ -56,6 +57,7 @@ sealed class Screen(val route: String) {
     data object Chat : Screen("chat/{conversationId}") {
         fun createRoute(conversationId: String): String = "chat/$conversationId"
     }
+    data object ContactPicker : Screen("contacts")
 }
 
 /**
@@ -152,11 +154,15 @@ fun AppNavigation(
                         onNavigateToChat = { conversationId ->
                             navController.navigate(Screen.Chat.createRoute(conversationId))
                         },
-                        // Top-right contacts icon and the FAB both land
-                        // on the contacts picker for now. A future split
-                        // can open "compose mode" for the FAB vs. full
-                        // contact management for the icon.
-                        onNavigateToContacts = { /* TODO: push contacts screen */ },
+                        // Top-right contacts icon AND the floating FAB
+                        // both route to the contact picker. A future
+                        // split could open "compose mode" on the FAB vs.
+                        // the full address book on the icon, but the
+                        // single destination is fine while the flow is
+                        // scoped to "pick someone to message".
+                        onNavigateToContacts = {
+                            navController.navigate(Screen.ContactPicker.route)
+                        },
                     )
 
                     // The full balance overview is only reached once a
@@ -183,6 +189,19 @@ fun AppNavigation(
             ChatScreen(
                 conversationId = conversationId,
                 onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Screen.ContactPicker.route) {
+            ContactPickerScreen(
+                onBack = { navController.popBackStack() },
+                onStartConversation = { contact ->
+                    // TODO: open or create a conversation with this contact.
+                    // For now the picker simply pops — wiring it into
+                    // MockChatRepository.createConversation() lands in
+                    // the next commit.
+                    navController.popBackStack()
+                },
             )
         }
     }

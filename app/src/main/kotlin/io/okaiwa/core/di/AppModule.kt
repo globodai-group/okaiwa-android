@@ -120,4 +120,10 @@ abstract class RepositoryModule {
     abstract fun bindWalletRepository(
         impl: io.okaiwa.features.wallet.data.repositories.StubWalletRepository
     ): WalletRepository
+
+    @dagger.Binds
+    @Singleton
+    abstract fun bindDeviceContactsRepository(
+        impl: io.okaiwa.features.contacts.data.repositories.AndroidDeviceContactsRepository
+    ): io.okaiwa.features.contacts.domain.repositories.DeviceContactsRepository
 }
