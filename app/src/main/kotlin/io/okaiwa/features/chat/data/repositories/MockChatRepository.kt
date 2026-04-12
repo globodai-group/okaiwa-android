@@ -309,20 +309,38 @@ class MockChatRepository @Inject constructor() : ChatRepository {
     private fun seedMessages(conversationId: String): List<Message> {
         val t = now
         val them = conversationId.removePrefix("c-")
+
+        // Conversation with the crypto-payment preview on the list —
+        // the thread should show the actual payment exchange.
+        if (conversationId == "c-chris") {
+            return listOf(
+                text(conversationId, them, "Salut ! Tu pourras me dépanner pour la facture du déjeuner ?", t - 25 * MINUTE, mine = false),
+                text(conversationId, them, "Bien sûr, je t'envoie ça direct 👌", t - 23 * MINUTE, mine = true),
+                crypto(conversationId, them, "250.00 USDC", t - 22 * MINUTE, mine = true),
+                text(conversationId, them, "Reçu ! Merci frère 🙏", t - 14 * MINUTE, mine = false),
+            )
+        }
+
+        // Generic rich thread — text, image, voice note, and a closing
+        // crypto payment so every bubble renderer is exercised.
         return listOf(
-            msg(conversationId, them, "Hey ! Tu as testé la beta ?", t - 2 * HOUR, mine = false),
-            msg(conversationId, them, "Oui, franchement le design est propre. La bar flottante est classe.", t - 2 * HOUR + MINUTE, mine = true),
-            msg(conversationId, them, "Carrément ! Et le wallet intégré dans les chats, c'est le move.", t - 2 * HOUR + 2 * MINUTE, mine = false),
-            msg(conversationId, them, "On pourra envoyer de l'USDC entre potes sans avoir à copier-coller d'adresse.", t - 2 * HOUR + 3 * MINUTE, mine = false),
-            msg(conversationId, them, "Exactement l'idée. Signal + Telegram + TrustWallet en un.", t - HOUR - 40 * MINUTE, mine = true),
-            msg(conversationId, them, "J'attends la release stable 🚀", t - HOUR, mine = false),
-            msg(conversationId, them, "Début de la semaine pro normalement.", t - 30 * MINUTE, mine = true),
-            msg(conversationId, them, "Tu me tiens au courant ?", t - 10 * MINUTE, mine = false),
-            msg(conversationId, them, "Évidemment 💪", t - 5 * MINUTE, mine = true),
+            text(conversationId, them, "Hey ! Tu as testé la beta d'Okaiwa ?", t - 3 * HOUR, mine = false),
+            text(conversationId, them, "Oui, franchement le design est propre. La bar flottante est classe.", t - 3 * HOUR + MINUTE, mine = true),
+            image(conversationId, them, "Regarde ce screen 📸", t - 3 * HOUR + 2 * MINUTE, mine = true),
+            text(conversationId, them, "Carrément ! Et le wallet intégré dans les chats, c'est le move.", t - 2 * HOUR - 40 * MINUTE, mine = false),
+            voice(conversationId, them, 14_000, t - 2 * HOUR - 30 * MINUTE, mine = false),
+            text(conversationId, them, "Écoute le vocal, je t'ai tout expliqué.", t - 2 * HOUR - 29 * MINUTE, mine = false),
+            text(conversationId, them, "Top, on est clairement sur un Signal + Telegram + TrustWallet en un.", t - 2 * HOUR, mine = true),
+            text(conversationId, them, "J'attends la release stable 🚀", t - HOUR, mine = false),
+            text(conversationId, them, "Début de la semaine pro normalement.", t - 30 * MINUTE, mine = true),
+            text(conversationId, them, "Tiens, petite contribution pour la pizza d'hier 🍕", t - 12 * MINUTE, mine = true),
+            crypto(conversationId, them, "0.015 ETH", t - 11 * MINUTE, mine = true),
+            text(conversationId, them, "Haha merci 😂", t - 8 * MINUTE, mine = false),
+            text(conversationId, them, "Évidemment 💪", t - 5 * MINUTE, mine = true),
         )
     }
 
-    private fun msg(
+    private fun text(
         conversationId: String,
         otherId: String,
         content: String,
@@ -334,6 +352,82 @@ class MockChatRepository @Inject constructor() : ChatRepository {
         senderId = if (mine) ME_USER_ID else otherId,
         plaintextContent = content,
         type = MessageType.Text,
+        status = MessageStatus.Read,
+        sentAt = at,
+        deliveredAt = at,
+        readAt = at,
+    )
+
+    private fun image(
+        conversationId: String,
+        otherId: String,
+        caption: String,
+        at: Long,
+        mine: Boolean,
+    ): Message = Message(
+        id = "m-${conversationId}-$at-img",
+        conversationId = conversationId,
+        senderId = if (mine) ME_USER_ID else otherId,
+        plaintextContent = caption,
+        type = MessageType.Image,
+        status = MessageStatus.Read,
+        attachments = listOf(
+            io.okaiwa.features.chat.domain.entities.Attachment(
+                id = "att-$conversationId-$at",
+                fileName = "screenshot.png",
+                mimeType = "image/png",
+                sizeBytes = 420_000,
+                encryptedUrl = null,
+                thumbnailUrl = null,
+                width = 1080,
+                height = 1920,
+            ),
+        ),
+        sentAt = at,
+        deliveredAt = at,
+        readAt = at,
+    )
+
+    private fun voice(
+        conversationId: String,
+        otherId: String,
+        durationMs: Long,
+        at: Long,
+        mine: Boolean,
+    ): Message = Message(
+        id = "m-${conversationId}-$at-voice",
+        conversationId = conversationId,
+        senderId = if (mine) ME_USER_ID else otherId,
+        plaintextContent = null,
+        type = MessageType.VoiceNote,
+        status = MessageStatus.Read,
+        attachments = listOf(
+            io.okaiwa.features.chat.domain.entities.Attachment(
+                id = "att-voice-$conversationId-$at",
+                fileName = "voice.m4a",
+                mimeType = "audio/mp4",
+                sizeBytes = 32_000,
+                encryptedUrl = null,
+                durationMs = durationMs,
+            ),
+        ),
+        sentAt = at,
+        deliveredAt = at,
+        readAt = at,
+    )
+
+    private fun crypto(
+        conversationId: String,
+        otherId: String,
+        amount: String,
+        at: Long,
+        mine: Boolean,
+    ): Message = Message(
+        id = "m-${conversationId}-$at-tx",
+        conversationId = conversationId,
+        senderId = if (mine) ME_USER_ID else otherId,
+        plaintextContent = amount,
+        type = MessageType.CryptoPayment,
         status = MessageStatus.Read,
         sentAt = at,
         deliveredAt = at,
