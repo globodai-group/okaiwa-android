@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Okaiwa" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+        Base theme for the Okaiwa Android application.
+
+        ComponentActivity hosts Compose content, so this framework theme
+        only sets the window chrome. Material 3 colors and typography
+        are applied via OkaiwaTheme composable inside setContent { }.
+    -->
+    <style name="Theme.Okaiwa" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ic_launcher_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+    </style>
 </resources>

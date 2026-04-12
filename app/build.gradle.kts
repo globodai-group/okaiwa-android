@@ -1,3 +1,5 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -8,6 +10,33 @@ plugins {
     alias(libs.plugins.google.services)
 }
 
+/**
+ * Build identifiers.
+ *
+ * - [versionName]  — semantic version controlled manually.
+ * - [versionCode]  — monotonic integer derived from the git commit count
+ *                    (`git rev-list --count HEAD`). Every commit that lands
+ *                    on any branch produces a unique, strictly increasing
+ *                    build number — which is exactly what Play Console and
+ *                    Firebase App Distribution require for a new upload.
+ *
+ * The same scheme is used on iOS (CFBundleShortVersionString = versionName,
+ * CFBundleVersion = commit count), keeping Android and iOS aligned.
+ *
+ * Outside of a git checkout (e.g. in a source tarball) the commit count
+ * falls back to 1 so the build still succeeds.
+ */
+val okaiwaVersionName = "1.0.0"
+val okaiwaVersionCode: Int = runCatching {
+    val stdout = ByteArrayOutputStream()
+    exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+        standardOutput = stdout
+        isIgnoreExitValue = true
+    }
+    stdout.toString().trim().toIntOrNull() ?: 1
+}.getOrElse { 1 }
+
 android {
     namespace = "io.okaiwa"
     compileSdk = 35
@@ -16,8 +45,8 @@ android {
         applicationId = "io.okaiwa.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = okaiwaVersionCode
+        versionName = okaiwaVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

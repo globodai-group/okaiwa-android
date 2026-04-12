@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Enforce certificate pinning for all API domains -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">okaiwa.io</domain>
-        <pin-set expiration="2027-01-01">
-            <pin digest="SHA-256">PROD_PIN_HASH_1_REPLACE_ME=</pin>
-            <pin digest="SHA-256">PROD_PIN_HASH_2_REPLACE_ME=</pin>
-        </pin-set>
-    </domain-config>
+    <!--
+        Base config — no cleartext traffic anywhere.
+        All Okaiwa traffic goes through HTTPS to the production relay.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
 
-    <!-- Debug override: allow staging cert for debug builds -->
+    <!--
+        Debug override — allow user-installed CAs so developers can
+        inspect traffic with Charles/Proxyman during local testing.
+    -->
     <debug-overrides>
         <trust-anchors>
             <certificates src="system" />
+            <certificates src="user" />
         </trust-anchors>
     </debug-overrides>
 </network-security-config>
