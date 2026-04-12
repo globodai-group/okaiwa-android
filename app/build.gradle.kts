@@ -13,20 +13,24 @@ plugins {
 /**
  * Build identifiers.
  *
- * - [versionName]  — semantic version controlled manually.
- * - [versionCode]  — monotonic integer derived from the git commit count
- *                    (`git rev-list --count HEAD`). Every commit that lands
- *                    on any branch produces a unique, strictly increasing
- *                    build number — which is exactly what Play Console and
- *                    Firebase App Distribution require for a new upload.
+ * - [versionCode] — monotonic integer = `git rev-list --count HEAD`.
+ *   Every commit produces a strictly increasing number — Play Console
+ *   and Firebase App Distribution require this for a new upload.
  *
- * The same scheme is used on iOS (CFBundleShortVersionString = versionName,
- * CFBundleVersion = commit count), keeping Android and iOS aligned.
+ * - [versionName] = "{MAJOR}.{MINOR}.{versionCode}" — the patch segment
+ *   tracks the commit count so every build shows its progress directly
+ *   in the tester UI. Bump [okaiwaMajor] / [okaiwaMinor] manually for
+ *   user-facing milestones (e.g. beta → stable → 2.0).
  *
- * Outside of a git checkout (e.g. in a source tarball) the commit count
- * falls back to 1 so the build still succeeds.
+ * iOS mirrors this exactly via scripts/set-ios-build-number.sh which
+ * writes CFBundleShortVersionString = {MAJOR}.{MINOR}.{count} and
+ * CFBundleVersion = {count}.
+ *
+ * Outside of a git checkout (e.g. a source tarball) the count falls
+ * back to 1 so the build still succeeds.
  */
-val okaiwaVersionName = "1.0.0"
+val okaiwaMajor = 1
+val okaiwaMinor = 0
 val okaiwaVersionCode: Int = runCatching {
     val stdout = ByteArrayOutputStream()
     exec {
@@ -36,6 +40,7 @@ val okaiwaVersionCode: Int = runCatching {
     }
     stdout.toString().trim().toIntOrNull() ?: 1
 }.getOrElse { 1 }
+val okaiwaVersionName = "$okaiwaMajor.$okaiwaMinor.$okaiwaVersionCode"
 
 android {
     namespace = "io.okaiwa"
