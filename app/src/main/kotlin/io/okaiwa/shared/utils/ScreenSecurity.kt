@@ -1,75 +1,84 @@
 package io.okaiwa.shared.utils
 
 import android.app.Activity
-import android.app.Application
-import android.os.Bundle
 import android.view.WindowManager
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
 
 /**
- * Screen security utility.
+ * Screen security — opt-in FLAG_SECURE protection.
  *
- * Applies FLAG_SECURE to all activities to prevent screenshots and
- * screen recording. This is a defense-in-depth measure — even if an
- * attacker gains physical access, sensitive content cannot be captured
- * through the Android screenshot/recording APIs.
+ * FLAG_SECURE is NOT applied globally. The default for every screen is
+ * "screenshots allowed" — so testers and reviewers can capture regular
+ * UX, and so the tooling that relies on screenshots (accessibility
+ * scanner, debug HUD, screen recording) keeps working.
  *
- * FLAG_SECURE is applied globally via ActivityLifecycleCallbacks,
- * ensuring no activity is accidentally left unprotected.
- * In debug builds, FLAG_SECURE can be conditionally disabled for testing.
+ * FLAG_SECURE must be explicitly requested on screens that display
+ * sensitive material:
+ *   - Secret conversations with screenshot protection enabled
+ *   - Seed phrase reveal
+ *   - Private key / mnemonic export
+ *   - Safety number / QR verification screen
+ *   - Biometric unlock screens
+ *
+ * Usage from a Composable:
+ *
+ *   @Composable
+ *   fun SeedPhraseScreen() {
+ *       SecureScreen()   // applies FLAG_SECURE while this screen is visible
+ *       // ...
+ *   }
+ *
+ * The effect is reversed when the screen leaves composition, so normal
+ * screens regain screenshot capability automatically.
  */
 object ScreenSecurity {
 
     /**
-     * Whether screen security is currently enabled.
-     * Can be toggled in debug builds for testing.
-     */
-    @Volatile
-    var isEnabled: Boolean = true
-
-    /**
-     * Register activity lifecycle callbacks to apply FLAG_SECURE
-     * to every activity as it is created.
-     *
-     * Call this in [Application.onCreate].
-     */
-    fun registerActivityLifecycleCallbacks(application: Application) {
-        application.registerActivityLifecycleCallbacks(
-            object : Application.ActivityLifecycleCallbacks {
-                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                    applyFlagSecure(activity)
-                }
-
-                override fun onActivityStarted(activity: Activity) = Unit
-                override fun onActivityResumed(activity: Activity) = Unit
-                override fun onActivityPaused(activity: Activity) = Unit
-                override fun onActivityStopped(activity: Activity) = Unit
-                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-                override fun onActivityDestroyed(activity: Activity) = Unit
-            }
-        )
-    }
-
-    /**
-     * Apply FLAG_SECURE to a specific activity's window.
+     * Apply FLAG_SECURE to the host activity's window.
      *
      * @param activity The activity to secure.
      */
     fun applyFlagSecure(activity: Activity) {
-        if (isEnabled) {
-            activity.window.setFlags(
-                WindowManager.LayoutParams.FLAG_SECURE,
-                WindowManager.LayoutParams.FLAG_SECURE,
-            )
-        }
+        activity.window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE,
+        )
     }
 
     /**
-     * Remove FLAG_SECURE from a specific activity's window.
-     * Only used in debug/testing scenarios.
+     * Remove FLAG_SECURE from the host activity's window.
      *
      * @param activity The activity to unsecure.
      */
     fun removeFlagSecure(activity: Activity) {
         activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
+}
+
+/**
+ * Compose-friendly scope that toggles FLAG_SECURE while the current
+ * screen is in the composition. Call this at the top of any Composable
+ * that displays sensitive content.
+ */
+@Composable
+fun SecureScreen() {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context.findActivity()
+        activity?.let { ScreenSecurity.applyFlagSecure(it) }
+        onDispose {
+            activity?.let { ScreenSecurity.removeFlagSecure(it) }
+        }
+    }
+}
+
+private fun android.content.Context.findActivity(): Activity? {
+    var ctx: android.content.Context? = this
+    while (ctx is android.content.ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

@@ -2,23 +2,15 @@ package io.okaiwa
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
-import io.okaiwa.shared.utils.ScreenSecurity
 
 /**
  * Okaiwa application entry point.
  *
- * Initializes Hilt dependency injection and applies global security policies
- * such as screenshot protection across all activities.
+ * Initializes Hilt dependency injection.
+ *
+ * Screen security (FLAG_SECURE) is NOT applied globally here — it is
+ * an opt-in per sensitive screen via [io.okaiwa.shared.utils.SecureScreen].
+ * See ScreenSecurity.kt for rationale.
  */
 @HiltAndroidApp
-class OkaiwaApp : Application() {
-
-    override fun onCreate() {
-        super.onCreate()
-        initScreenSecurity()
-    }
-
-    private fun initScreenSecurity() {
-        ScreenSecurity.registerActivityLifecycleCallbacks(this)
-    }
-}
+class OkaiwaApp : Application()

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.okaiwa.BuildConfig
 import io.okaiwa.core.theme.OkaiwaColors
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -210,6 +211,22 @@ fun OtpVerificationScreen(
                         },
                     )
                 }
+            }
+
+            // Dev hint — debug builds only. R8 strips this whole block
+            // in release because the predicate folds to a constant.
+            if (BuildConfig.DEBUG) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "DEV — utilisez 000000 pour passer",
+                    color = OkaiwaColors.Lime,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                )
             }
         }
 

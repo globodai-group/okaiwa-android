@@ -65,7 +65,7 @@ fun WelcomeScreen(
                 .padding(bottom = 160.dp),
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                painter = painterResource(id = R.drawable.okaiwa_logo),
                 contentDescription = null,
                 modifier = Modifier.size(180.dp),
             )

@@ -1,7 +1,6 @@
 package io.okaiwa
 
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,15 +15,16 @@ import io.okaiwa.core.theme.OkaiwaTheme
 /**
  * Main activity for Okaiwa.
  *
- * Sets FLAG_SECURE to prevent screenshots and screen recording of sensitive content.
- * Uses Jetpack Compose for the entire UI with Material 3 theming.
+ * Hosts the full Compose navigation graph. Screen security (FLAG_SECURE)
+ * is applied selectively on sensitive screens via `SecureScreen()` — it
+ * is deliberately NOT applied to the activity window, so testers can
+ * take screenshots of normal UX during development.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyScreenSecurity()
         enableEdgeToEdge()
 
         setContent {
@@ -36,15 +36,6 @@ class MainActivity : ComponentActivity() {
                     AppNavigation()
                 }
             }
-        }
-    }
-
-    private fun applyScreenSecurity() {
-        if (!BuildConfig.DEBUG) {
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_SECURE,
-                WindowManager.LayoutParams.FLAG_SECURE,
-            )
         }
     }
 }

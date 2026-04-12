@@ -83,7 +83,7 @@ fun SplashScreen(onFinished: () -> Unit) {
             verticalArrangement = Arrangement.Center,
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                painter = painterResource(id = R.drawable.okaiwa_logo),
                 contentDescription = null,
                 modifier = Modifier
                     .size(160.dp)
