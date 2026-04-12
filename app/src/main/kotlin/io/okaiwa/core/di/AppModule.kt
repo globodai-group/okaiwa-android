@@ -103,10 +103,16 @@ abstract class RepositoryModule {
         impl: io.okaiwa.features.auth.data.repositories.StubAuthRepository
     ): AuthRepository
 
+    // Wired to the mock while the relay service + Signal Protocol FFI
+    // are still under construction. The mock serves a realistic
+    // conversation graph so the whole UX can be test-driven before the
+    // real HTTP + WebSocket client lands. Swap back to
+    // `StubChatRepository` or a production impl by changing this single
+    // line.
     @dagger.Binds
     @Singleton
     abstract fun bindChatRepository(
-        impl: io.okaiwa.features.chat.data.repositories.StubChatRepository
+        impl: io.okaiwa.features.chat.data.repositories.MockChatRepository
     ): ChatRepository
 
     @dagger.Binds
