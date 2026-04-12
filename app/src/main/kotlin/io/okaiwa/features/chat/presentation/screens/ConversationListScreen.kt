@@ -20,27 +20,39 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,6 +90,7 @@ fun ConversationListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val floatingBarInset = LocalFloatingBarPadding.current.calculateBottomPadding()
+    var isSearchOpen by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -89,10 +102,21 @@ fun ConversationListScreen(
                 .fillMaxSize()
                 .statusBarsPadding(),
         ) {
-            ConversationListTopBar(
-                onSearchClick = { /* TODO: inline search */ },
-                onContactsClick = onNavigateToContacts,
-            )
+            if (isSearchOpen) {
+                SearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = viewModel::onSearchQueryChanged,
+                    onClose = {
+                        isSearchOpen = false
+                        viewModel.onSearchQueryChanged("")
+                    },
+                )
+            } else {
+                ConversationListTopBar(
+                    onSearchClick = { isSearchOpen = true },
+                    onContactsClick = onNavigateToContacts,
+                )
+            }
 
             when {
                 uiState.isLoading -> {
@@ -175,6 +199,52 @@ fun ConversationListScreen(
                 contentDescription = "Nouvelle conversation",
             )
         }
+    }
+}
+
+@Composable
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClose: () -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onClose) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Fermer la recherche",
+                tint = OkaiwaColors.White,
+            )
+        }
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+                .focusRequester(focusRequester),
+            placeholder = { Text("Rechercher des conversations", color = OkaiwaColors.Placeholder) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OkaiwaColors.Muted) },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            textStyle = TextStyle(color = OkaiwaColors.White, fontSize = 15.sp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = OkaiwaColors.Lime,
+                unfocusedBorderColor = OkaiwaColors.BlackBorder,
+                cursorColor = OkaiwaColors.Lime,
+                focusedContainerColor = OkaiwaColors.BlackElevated,
+                unfocusedContainerColor = OkaiwaColors.BlackElevated,
+            ),
+        )
     }
 }
 
