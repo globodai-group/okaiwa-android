@@ -67,19 +67,32 @@ class AndroidDeviceContactsRepository @Inject constructor(
                         displayName = name,
                         phoneNumberE164 = normalized,
                         avatarUri = photoUri,
-                        // Mock "on Okaiwa" flag — every third contact
-                        // is marked as on the platform so we can test
-                        // both the message-row and invite-row UX.
-                        isOnOkaiwa = (normalized.hashCode() and 3) == 0,
-                        okaiwaUsername = if ((normalized.hashCode() and 3) == 0) {
-                            "@${name.lowercase().replace(" ", "").take(12)}"
-                        } else null,
+                        // Mock flag resolved below once the full cohort
+                        // is known — keeping it uniform per entry while
+                        // streaming the cursor avoids a second pass over
+                        // a data class that is otherwise immutable.
+                        isOnOkaiwa = false,
+                        okaiwaUsername = null,
                     ),
                 )
             }
         }
 
-        results
+        // Mock "on Okaiwa" split — flip the first 8 entries to Okaiwa
+        // users. The previous `hashCode() and 3 == 0` coin-flip flagged
+        // the entire 635-contact test address book because Kotlin's
+        // `String.hashCode()` is not uniformly distributed over short
+        // phone-number strings; on a real device every number happened
+        // to have its two low bits cleared. A fixed, small cohort keeps
+        // the UX split (message vs invite) useful while we wait for the
+        // real identity-service phone-hash lookup.
+        val cohort = results.take(8).map {
+            it.copy(
+                isOnOkaiwa = true,
+                okaiwaUsername = "@" + it.displayName.lowercase().replace(" ", "").take(12),
+            )
+        }
+        cohort + results.drop(8)
     }
 
     private fun hasContactsPermission(): Boolean = ContextCompat.checkSelfPermission(
