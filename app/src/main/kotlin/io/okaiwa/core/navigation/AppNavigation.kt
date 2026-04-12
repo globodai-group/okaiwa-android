@@ -24,7 +24,7 @@ import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
 import io.okaiwa.features.profile.presentation.screens.ProfileScreen
 import io.okaiwa.features.settings.presentation.screens.SettingsScreen
-import io.okaiwa.features.wallet.presentation.screens.WalletScreen
+import io.okaiwa.features.wallet.presentation.screens.WalletOnboardingScreen
 
 /**
  * Navigation routes for the entire app.
@@ -152,10 +152,20 @@ fun AppNavigation(
                         onNavigateToChat = { conversationId ->
                             navController.navigate(Screen.Chat.createRoute(conversationId))
                         },
+                        // Top-right contacts icon and the FAB both land
+                        // on the contacts picker for now. A future split
+                        // can open "compose mode" for the FAB vs. full
+                        // contact management for the icon.
+                        onNavigateToContacts = { /* TODO: push contacts screen */ },
                     )
 
-                    MainTab.Wallet -> WalletScreen(
-                        onNavigateToSend = { /* chain -> push send screen */ },
+                    // The full balance overview is only reached once a
+                    // wallet exists. Until then, the tab shows the
+                    // create/import CTA so we never advertise a "0 ETH"
+                    // empty state that could read as a hollow promise.
+                    MainTab.Wallet -> WalletOnboardingScreen(
+                        onCreateWallet = { /* TODO: push seed-phrase gen flow */ },
+                        onImportWallet = { /* TODO: push mnemonic import flow */ },
                     )
 
                     MainTab.Settings -> SettingsScreen()

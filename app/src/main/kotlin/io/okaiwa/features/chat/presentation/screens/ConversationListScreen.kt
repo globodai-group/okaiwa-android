@@ -1,36 +1,39 @@
 package io.okaiwa.features.chat.presentation.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,7 +43,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.core.navigation.LocalFloatingBarPadding
+import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.chat.domain.entities.Conversation
 import io.okaiwa.features.chat.presentation.viewmodels.ConversationListViewModel
 import java.text.SimpleDateFormat
@@ -48,84 +54,88 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Conversation list screen (main screen).
+ * Conversation list — the "Échanges" tab.
  *
- * Displays all active conversations in a LazyColumn with pinned
- * conversations at the top. Shows unread badges, last message preview,
- * and timestamp. Supports search filtering.
+ * Layout:
+ *   - Top bar: "Okaiwa" wordmark, search, contacts icon (top-right).
+ *   - List or empty state.
+ *   - Floating "new conversation" FAB pinned above the tab bar.
+ *
+ * The FAB is positioned manually rather than through Scaffold's
+ * `floatingActionButton` slot because the app's main bottom bar isn't a
+ * Scaffold bottomBar — it floats over every tab via `MainScaffold`. The
+ * Scaffold-owned FAB would therefore sit at the screen edge, underneath
+ * the floating nav. Positioning it manually lets us read the
+ * `LocalFloatingBarPadding` CompositionLocal and offset the FAB by the
+ * bar's reserved height plus a gutter.
  */
 @Composable
 fun ConversationListScreen(
     onNavigateToChat: (String) -> Unit,
+    onNavigateToContacts: () -> Unit = {},
+    onNavigateToNewConversation: () -> Unit = onNavigateToContacts,
     viewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val floatingBarInset = LocalFloatingBarPadding.current.calculateBottomPadding()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Okaiwa",
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: toggle search */ }) {
-                        Icon(Icons.Default.Search, contentDescription = "Rechercher")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(OkaiwaColors.Black),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
+        ) {
+            ConversationListTopBar(
+                onSearchClick = { /* TODO: inline search */ },
+                onContactsClick = onNavigateToContacts,
             )
-        },
-        floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
-                onClick = { /* TODO: new conversation */ },
-                containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Icon(
-                    Icons.Default.Chat,
-                    contentDescription = "New conversation",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        },
-    ) { paddingValues ->
-        when {
-            uiState.isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
+
+            when {
+                uiState.isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = floatingBarInset),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = OkaiwaColors.Lime)
+                    }
                 }
-            }
 
-            uiState.conversations.isEmpty() -> {
-                EmptyConversationsView(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
-            }
+                uiState.conversations.isEmpty() -> {
+                    EmptyConversationsView(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = floatingBarInset),
+                    )
+                }
 
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                ) {
-                    // Pinned conversations
-                    val pinned = uiState.pinnedConversations
-                    if (pinned.isNotEmpty()) {
-                        items(
-                            items = pinned,
-                            key = { it.id },
-                        ) { conversation ->
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = floatingBarInset),
+                    ) {
+                        val pinned = uiState.pinnedConversations
+                        if (pinned.isNotEmpty()) {
+                            items(items = pinned, key = { it.id }) { conversation ->
+                                ConversationItem(
+                                    conversation = conversation,
+                                    onClick = {
+                                        viewModel.markConversationAsRead(conversation.id)
+                                        onNavigateToChat(conversation.id)
+                                    },
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 76.dp),
+                                    color = OkaiwaColors.BlackBorder,
+                                )
+                            }
+                        }
+                        items(items = uiState.regularConversations, key = { it.id }) { conversation ->
                             ConversationItem(
                                 conversation = conversation,
                                 onClick = {
@@ -135,30 +145,68 @@ fun ConversationListScreen(
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 76.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant,
+                                color = OkaiwaColors.BlackBorder,
                             )
                         }
                     }
-
-                    // Regular conversations
-                    items(
-                        items = uiState.regularConversations,
-                        key = { it.id },
-                    ) { conversation ->
-                        ConversationItem(
-                            conversation = conversation,
-                            onClick = {
-                                viewModel.markConversationAsRead(conversation.id)
-                                onNavigateToChat(conversation.id)
-                            },
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 76.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    }
                 }
             }
+        }
+
+        // FAB — lime pill pinned above the floating bar. We add a small
+        // gutter (4 dp) on top of the bar's reserved inset so the FAB
+        // visually sits "on" the bar, not touching it.
+        FloatingActionButton(
+            onClick = onNavigateToNewConversation,
+            containerColor = OkaiwaColors.Lime,
+            contentColor = OkaiwaColors.Black,
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = floatingBarInset + 4.dp)
+                .size(56.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Create,
+                contentDescription = "Nouvelle conversation",
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConversationListTopBar(
+    onSearchClick: () -> Unit,
+    onContactsClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Okaiwa",
+            color = OkaiwaColors.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp),
+        )
+        IconButton(onClick = onSearchClick) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
+                contentDescription = "Rechercher",
+                tint = OkaiwaColors.White,
+            )
+        }
+        IconButton(onClick = onContactsClick) {
+            Icon(
+                imageVector = Icons.Outlined.People,
+                contentDescription = "Contacts",
+                tint = OkaiwaColors.White,
+            )
         }
     }
 }
@@ -175,18 +223,18 @@ private fun ConversationItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatar placeholder
         Surface(
             modifier = Modifier
                 .size(52.dp)
                 .clip(CircleShape),
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = OkaiwaColors.Lime.copy(alpha = 0.15f),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = conversation.displayTitle.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = OkaiwaColors.Lime,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
                 )
             }
         }
@@ -204,8 +252,9 @@ private fun ConversationItem(
             ) {
                 Text(
                     text = conversation.displayTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (conversation.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                    color = OkaiwaColors.White,
+                    fontSize = 16.sp,
+                    fontWeight = if (conversation.unreadCount > 0) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -214,12 +263,8 @@ private fun ConversationItem(
                 conversation.lastMessage?.let { preview ->
                     Text(
                         text = formatTimestamp(preview.timestamp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (conversation.unreadCount > 0) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        fontSize = 12.sp,
+                        color = if (conversation.unreadCount > 0) OkaiwaColors.Lime else OkaiwaColors.Muted,
                     )
                 }
             }
@@ -233,8 +278,8 @@ private fun ConversationItem(
             ) {
                 Text(
                     text = conversation.lastMessage?.content ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
+                    color = OkaiwaColors.WhiteDim,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -243,8 +288,8 @@ private fun ConversationItem(
                 if (conversation.unreadCount > 0) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Badge(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = OkaiwaColors.Lime,
+                        contentColor = OkaiwaColors.Black,
                     ) {
                         Text(
                             text = if (conversation.unreadCount > 99) "99+" else conversation.unreadCount.toString(),
@@ -264,22 +309,23 @@ private fun EmptyConversationsView(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = Icons.Default.Chat,
+            imageVector = Icons.AutoMirrored.Outlined.Chat,
             contentDescription = null,
+            tint = OkaiwaColors.Muted,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "No conversations yet",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "Aucune conversation",
+            color = OkaiwaColors.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Start a new conversation to message securely.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "Commencez une conversation chiffrée avec un contact.",
+            color = OkaiwaColors.Muted,
+            fontSize = 14.sp,
         )
     }
 }
