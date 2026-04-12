@@ -165,7 +165,9 @@ fun ConversationListScreen(
             contentColor = OkaiwaColors.Black,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = floatingBarInset + 4.dp)
+                // 16 dp gutter above the floating bar keeps the FAB
+                // comfortably off the bar rather than hugging it.
+                .padding(end = 20.dp, bottom = floatingBarInset + 16.dp)
                 .size(56.dp),
         ) {
             Icon(
