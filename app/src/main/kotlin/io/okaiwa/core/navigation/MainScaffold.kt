@@ -28,16 +28,20 @@ import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -133,6 +137,7 @@ private fun FloatingNavBar(
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val barShape = RoundedCornerShape(16.dp)
     Box(
         modifier = modifier
             .navigationBarsPadding()
@@ -143,16 +148,25 @@ private fun FloatingNavBar(
             )
             .fillMaxWidth()
             .height(FloatingBarHeight)
-            .clip(RoundedCornerShape(16.dp))
-            // Semi-translucent tint — Compose has no backdrop blur
-            // primitive that works across API 26+, but 78 % opacity of
-            // the elevated canvas colour already reads as "floating"
-            // against scrolling list content underneath.
-            .background(OkaiwaColors.BlackElevated.copy(alpha = 0.78f))
+            // Soft lift — reads as "floating" over the content without
+            // the harsh shadow the default elevation would paint.
+            .shadow(
+                elevation = 12.dp,
+                shape = barShape,
+                ambientColor = Color.Black,
+                spotColor = Color.Black,
+            )
+            .clip(barShape)
+            // 92 % opacity over the elevated canvas keeps a subtle hint
+            // of the list content behind the bar (Telegram-style) while
+            // staying solid enough that tab labels never sit on top of
+            // noisy artwork. Tuned after the 78 % version read as too
+            // washed-out on device.
+            .background(OkaiwaColors.BlackElevated.copy(alpha = 0.92f))
             .border(
                 width = 1.dp,
-                color = OkaiwaColors.BlackBorder.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(16.dp),
+                color = OkaiwaColors.BlackBorder.copy(alpha = 0.7f),
+                shape = barShape,
             ),
     ) {
         Row(
@@ -178,6 +192,7 @@ private fun RowScope.TabItem(
     onClick: () -> Unit,
 ) {
     val tint = if (isSelected) OkaiwaColors.Lime else OkaiwaColors.Muted
+    val interactionSource = remember { MutableInteractionSource() }
 
     Column(
         modifier = Modifier
@@ -187,6 +202,11 @@ private fun RowScope.TabItem(
                 selected = isSelected,
                 onClick = onClick,
                 role = Role.Tab,
+                // Drop the default ripple: on a translucent bar the ripple
+                // paints a lime rectangle under the tab that reads as a
+                // stuck selection state on the screenshot.
+                interactionSource = interactionSource,
+                indication = null,
             )
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
