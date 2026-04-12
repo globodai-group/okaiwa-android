@@ -29,11 +29,15 @@ object OkaiwaColors {
     val LimePressed = Color(0xFFC8D935)
     val LimeDim = Color(0xFF7A8221)
 
-    // Dark canvas — the main app background.
-    val Black = Color(0xFF0F0F0F)
-    val BlackElevated = Color(0xFF1A1A1A)
-    val BlackCard = Color(0xFF242424)
-    val BlackBorder = Color(0xFF2F2F2F)
+    // Dark canvas — the main app background. The base tone #242424
+    // matches the rectangle behind the whale in the Figma logo kit and
+    // is the canonical "Okaiwa dark". The rest of the scale steps up
+    // from there to preserve the elevation story for inputs, cards,
+    // and separators.
+    val Black = Color(0xFF242424)
+    val BlackElevated = Color(0xFF2D2D2D)
+    val BlackCard = Color(0xFF363636)
+    val BlackBorder = Color(0xFF404040)
 
     // Text
     val White = Color(0xFFFFFFFF)
