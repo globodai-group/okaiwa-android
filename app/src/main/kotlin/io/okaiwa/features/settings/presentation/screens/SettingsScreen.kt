@@ -55,9 +55,7 @@ import io.okaiwa.features.settings.domain.entities.SecurityScore
  * configuration. Organized in sections with Material 3 styling.
  */
 @Composable
-fun SettingsScreen(
-    onNavigateBack: () -> Unit,
-) {
+fun SettingsScreen() {
     // Placeholder security score — in production, comes from ViewModel
     val securityScore = SecurityScore(
         hasDevicePasscodeEnabled = true,
@@ -72,11 +70,6 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
                 title = { Text("Settings") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,

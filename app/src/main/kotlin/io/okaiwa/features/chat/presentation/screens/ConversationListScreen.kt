@@ -57,8 +57,6 @@ import java.util.Locale
 @Composable
 fun ConversationListScreen(
     onNavigateToChat: (String) -> Unit,
-    onNavigateToWallet: () -> Unit,
-    onNavigateToSettings: () -> Unit,
     viewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -74,13 +72,7 @@ fun ConversationListScreen(
                 },
                 actions = {
                     IconButton(onClick = { /* TODO: toggle search */ }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = onNavigateToWallet) {
-                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Wallet")
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Search, contentDescription = "Rechercher")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

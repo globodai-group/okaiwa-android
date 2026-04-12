@@ -64,7 +64,6 @@ import java.util.Locale
  */
 @Composable
 fun WalletScreen(
-    onNavigateBack: () -> Unit,
     onNavigateToSend: (String) -> Unit,
     viewModel: WalletViewModel = hiltViewModel(),
 ) {
@@ -73,11 +72,6 @@ fun WalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
                 title = { Text("Wallet") },
                 actions = {
                     IconButton(

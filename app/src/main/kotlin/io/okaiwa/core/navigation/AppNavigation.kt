@@ -3,7 +3,6 @@ package io.okaiwa.core.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -23,6 +22,7 @@ import io.okaiwa.features.auth.presentation.screens.SplashScreen
 import io.okaiwa.features.auth.presentation.screens.WelcomeScreen
 import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
+import io.okaiwa.features.profile.presentation.screens.ProfileScreen
 import io.okaiwa.features.settings.presentation.screens.SettingsScreen
 import io.okaiwa.features.wallet.presentation.screens.WalletScreen
 
@@ -30,12 +30,12 @@ import io.okaiwa.features.wallet.presentation.screens.WalletScreen
  * Navigation routes for the entire app.
  *
  * The onboarding graph is:
- *   Splash -> Welcome -> (Register | Login) -> CountryPicker (modal)
- *                          -> Phone entry -> Otp verification -> ConversationList
+ *   Splash -> Welcome -> PhoneEntry -> CountryPicker (modal) -> Otp -> Main
  *
- * Routes are ephemeral — no backstack restoration across process death
- * yet. The UX flow reboots at Splash every cold start until the
- * persistent auth session lands.
+ * Once through onboarding the user lands on [Screen.Main] which hosts
+ * the four-tab bottom navigation. Secondary screens (individual chat,
+ * settings sub-pages, wallet send/receive) are pushed on top of the
+ * Main scaffold.
  */
 sealed class Screen(val route: String) {
     // Onboarding
@@ -49,13 +49,13 @@ sealed class Screen(val route: String) {
         fun createRoute(phone: String): String = "otp/${java.net.URLEncoder.encode(phone, "UTF-8")}"
     }
 
-    // Main tabs
-    data object ConversationList : Screen("conversations")
+    // Main bottom-tab host
+    data object Main : Screen("main")
+
+    // Stacked destinations pushed on top of the main scaffold.
     data object Chat : Screen("chat/{conversationId}") {
         fun createRoute(conversationId: String): String = "chat/$conversationId"
     }
-    data object Wallet : Screen("wallet")
-    data object Settings : Screen("settings")
 }
 
 /**
@@ -66,9 +66,6 @@ fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
-    // Holds the country pick between PhoneNumberScreen ↔ CountryPickerScreen.
-    // Saveable keeps the selection across config changes; we store the ISO
-    // code (a plain String) and rehydrate the full Country on restore.
     var selectedIso by rememberSaveable { mutableStateOf(Countries.default.isoCode) }
     val selectedCountry: Country = Countries.findByIso(selectedIso) ?: Countries.default
 
@@ -139,7 +136,7 @@ fun AppNavigation(
                 phoneNumberDisplay = phone,
                 onBack = { navController.popBackStack() },
                 onSubmit = {
-                    navController.navigate(Screen.ConversationList.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 },
@@ -147,15 +144,25 @@ fun AppNavigation(
             )
         }
 
-        // Main tabs
-        composable(Screen.ConversationList.route) {
-            ConversationListScreen(
-                onNavigateToChat = { conversationId ->
-                    navController.navigate(Screen.Chat.createRoute(conversationId))
-                },
-                onNavigateToWallet = { navController.navigate(Screen.Wallet.route) },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-            )
+        // Main bottom-tab host
+        composable(Screen.Main.route) {
+            MainScaffold { tab ->
+                when (tab) {
+                    MainTab.Chats -> ConversationListScreen(
+                        onNavigateToChat = { conversationId ->
+                            navController.navigate(Screen.Chat.createRoute(conversationId))
+                        },
+                    )
+
+                    MainTab.Wallet -> WalletScreen(
+                        onNavigateToSend = { /* chain -> push send screen */ },
+                    )
+
+                    MainTab.Settings -> SettingsScreen()
+
+                    MainTab.Profile -> ProfileScreen()
+                }
+            }
         }
 
         composable(
@@ -165,19 +172,6 @@ fun AppNavigation(
             val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
             ChatScreen(
                 conversationId = conversationId,
-                onNavigateBack = { navController.popBackStack() },
-            )
-        }
-
-        composable(Screen.Wallet.route) {
-            WalletScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSend = { /* chain -> */ },
-            )
-        }
-
-        composable(Screen.Settings.route) {
-            SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
             )
         }
