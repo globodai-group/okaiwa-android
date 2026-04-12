@@ -22,6 +22,7 @@ import io.okaiwa.features.auth.presentation.screens.SplashScreen
 import io.okaiwa.features.auth.presentation.screens.WelcomeScreen
 import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
+import io.okaiwa.features.chat.presentation.screens.NewMessageScreen
 import io.okaiwa.features.contacts.presentation.screens.ContactPickerScreen
 import io.okaiwa.features.profile.presentation.screens.ProfileScreen
 import io.okaiwa.features.settings.presentation.screens.SettingsScreen
@@ -57,6 +58,9 @@ sealed class Screen(val route: String) {
     data object Chat : Screen("chat/{conversationId}") {
         fun createRoute(conversationId: String): String = "chat/$conversationId"
     }
+    /** FAB entry — groups / channels / invite + existing Okaiwa contacts. */
+    data object NewMessage : Screen("new_message")
+    /** Contacts icon entry — device address book with READ_CONTACTS. */
     data object ContactPicker : Screen("contacts")
 }
 
@@ -154,14 +158,19 @@ fun AppNavigation(
                         onNavigateToChat = { conversationId ->
                             navController.navigate(Screen.Chat.createRoute(conversationId))
                         },
-                        // Top-right contacts icon AND the floating FAB
-                        // both route to the contact picker. A future
-                        // split could open "compose mode" on the FAB vs.
-                        // the full address book on the icon, but the
-                        // single destination is fine while the flow is
-                        // scoped to "pick someone to message".
+                        // Top-right contacts icon → device address book
+                        // picker (READ_CONTACTS permission gated) where
+                        // you match phone contacts against Okaiwa users.
                         onNavigateToContacts = {
                             navController.navigate(Screen.ContactPicker.route)
+                        },
+                        // FAB → new-message compose flow: group / channel /
+                        // invite actions + list of existing Okaiwa
+                        // contacts (people you already have conversations
+                        // with). This is purely Okaiwa-side data and does
+                        // NOT ask the user for the contacts permission.
+                        onNavigateToNewConversation = {
+                            navController.navigate(Screen.NewMessage.route)
                         },
                     )
 
@@ -189,6 +198,22 @@ fun AppNavigation(
             ChatScreen(
                 conversationId = conversationId,
                 onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Screen.NewMessage.route) {
+            NewMessageScreen(
+                onBack = { navController.popBackStack() },
+                onStartConversation = { conversationId ->
+                    // Replace the compose screen with the actual chat —
+                    // pressing back returns to the conversation list
+                    // rather than stacking NewMessage in the history.
+                    navController.popBackStack()
+                    navController.navigate(Screen.Chat.createRoute(conversationId))
+                },
+                onInviteContact = {
+                    navController.navigate(Screen.ContactPicker.route)
+                },
             )
         }
 
