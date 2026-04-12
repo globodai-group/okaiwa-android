@@ -113,7 +113,7 @@ fun ConversationListScreen(
                 }
             }
 
-            uiState.conversations.isEmpty -> {
+            uiState.conversations.isEmpty() -> {
                 EmptyConversationsView(
                     modifier = Modifier
                         .fillMaxSize()

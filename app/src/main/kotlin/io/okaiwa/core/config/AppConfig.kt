@@ -46,12 +46,11 @@ enum class Environment(
     val certPinningHashes: List<String>,
 ) {
     DEV(
-        apiBaseUrl = "https://api.dev.okaiwa.io/v1/",
-        wsBaseUrl = "wss://ws.dev.okaiwa.io/v1/stream",
-        certPinningHashes = listOf(
-            "sha256/DEV_PIN_HASH_1_REPLACE_ME",
-            "sha256/DEV_PIN_HASH_2_REPLACE_ME",
-        ),
+        apiBaseUrl = "https://okaiwa-api.globodai.group/v1/",
+        wsBaseUrl = "wss://okaiwa-api.globodai.group/v1/ws",
+        // Empty list disables certificate pinning. Pinning will be enabled
+        // once we have stable CA-signed certificates across all environments.
+        certPinningHashes = emptyList(),
     ),
     REC(
         apiBaseUrl = "https://api.rec.okaiwa.io/v1/",

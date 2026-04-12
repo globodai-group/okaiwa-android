@@ -90,14 +90,28 @@ object AppModule {
 /**
  * Repository bindings module.
  *
- * Binds repository interfaces to their implementations.
- * Implementations will be provided when the data layer is built out.
+ * Currently binds the stub implementations shipped in the first test
+ * build. Real implementations will replace these as the data layer
+ * (HTTP clients, WebSocket manager, Room database, FFI bridges) lands.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
-    // TODO: Bind repository implementations when data layer is implemented.
-    // @Binds abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
-    // @Binds abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
-    // @Binds abstract fun bindWalletRepository(impl: WalletRepositoryImpl): WalletRepository
+    @dagger.Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        impl: io.okaiwa.features.auth.data.repositories.StubAuthRepository
+    ): AuthRepository
+
+    @dagger.Binds
+    @Singleton
+    abstract fun bindChatRepository(
+        impl: io.okaiwa.features.chat.data.repositories.StubChatRepository
+    ): ChatRepository
+
+    @dagger.Binds
+    @Singleton
+    abstract fun bindWalletRepository(
+        impl: io.okaiwa.features.wallet.data.repositories.StubWalletRepository
+    ): WalletRepository
 }

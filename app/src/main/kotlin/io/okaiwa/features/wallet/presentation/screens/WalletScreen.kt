@@ -154,7 +154,7 @@ fun WalletScreen(
                         )
                     }
 
-                    if (uiState.transactions.isEmpty) {
+                    if (uiState.transactions.isEmpty()) {
                         item {
                             Text(
                                 text = "No transactions yet",
