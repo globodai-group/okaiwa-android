@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#009688</color>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!--
+        Launcher background — matches the dark rectangle behind the whale
+        in the Figma brand mock. Must stay in sync with the background
+        of the composed PNG icons in mipmap-*/ic_launcher.png.
+    -->
+    <color name="ic_launcher_background">#242424</color>
+
+    <!-- Legacy defaults kept around for reference; not used by the theme. -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>
