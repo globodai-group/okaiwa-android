@@ -1,9 +1,13 @@
 package io.okaiwa.core.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ChatBubble
@@ -24,13 +29,15 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -38,13 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.okaiwa.core.theme.OkaiwaColors
 
-/**
- * Primary surfaces of the app, selected via the bottom navigation.
- *
- * The order matters — it drives the visual order of the tab bar and
- * matches the iOS TabView order so users moving between platforms see
- * identical placement.
- */
+/** Primary surfaces of the app, selected via the floating bottom bar. */
 enum class MainTab(
     val label: String,
     val iconSelected: ImageVector,
@@ -73,16 +74,30 @@ enum class MainTab(
 }
 
 /**
+ * Vertical padding the floating bar needs from the bottom edge of the
+ * screen. Tabs expose it to their content via [LocalFloatingBarPadding]
+ * so `LazyColumn` content-padding can reserve room and the last item
+ * doesn't sit behind the bar.
+ */
+private val FloatingBarHeight = 64.dp
+private val FloatingBarBottomMargin = 12.dp
+private val FloatingBarHorizontalMargin = 16.dp
+
+/**
+ * [PaddingValues] the current tab should add to its scrollable content
+ * so nothing lives permanently behind the floating bar. Tabs read this
+ * via `LocalFloatingBarPadding.current`.
+ */
+val LocalFloatingBarPadding = staticCompositionLocalOf { PaddingValues(bottom = 0.dp) }
+
+/**
  * Bottom-bar host that holds the four primary surfaces.
  *
- * The active tab's content is rendered via [content]; the caller wires
- * up the ConversationList / Wallet / Settings / Profile composables
- * based on the current [selectedTab].
- *
- * We render all tabs into the same Scaffold (no animated NavHost switch)
- * because switching the entire nav graph on tab taps would dismiss the
- * onscreen keyboard and snap scroll positions. A stateful host keeps
- * each surface's state alive across tab switches.
+ * The bar floats over the tab content rather than pushing it up — this
+ * lets lists scroll through the translucent bar (Telegram-style) while
+ * preserving the brand's soft-rounded corner language instead of the
+ * full pill shape. Corner radius is tied to the main button radius so
+ * the bar reads as a big sibling of the Welcome CTAs.
  */
 @Composable
 fun MainScaffold(
@@ -90,41 +105,58 @@ fun MainScaffold(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Chats) }
 
-    Column(
+    // Exposes the required content inset for the active tab so its
+    // scrollable content can avoid the translucent bar overlay.
+    val tabContentPadding = PaddingValues(
+        bottom = FloatingBarHeight + FloatingBarBottomMargin + 16.dp,
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(OkaiwaColors.Black),
     ) {
-        Box(modifier = Modifier.weight(1f)) {
+        CompositionLocalProvider(LocalFloatingBarPadding provides tabContentPadding) {
             content(selectedTab)
         }
-        OkaiwaBottomBar(
+        FloatingNavBar(
             selectedTab = selectedTab,
             onTabSelected = { selectedTab = it },
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
 
 @Composable
-private fun OkaiwaBottomBar(
+private fun FloatingNavBar(
     selectedTab: MainTab,
     onTabSelected: (MainTab) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column {
-        // Hairline divider — cheaper than a full elevation shadow, and
-        // reads better on the dark canvas.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(0.5.dp)
-                .background(OkaiwaColors.BlackBorder),
-        )
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(OkaiwaColors.Black)
-                .navigationBarsPadding()
-                .height(64.dp),
+    Box(
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(
+                start = FloatingBarHorizontalMargin,
+                end = FloatingBarHorizontalMargin,
+                bottom = FloatingBarBottomMargin,
+            )
+            .fillMaxWidth()
+            .height(FloatingBarHeight)
+            .clip(RoundedCornerShape(16.dp))
+            // Semi-translucent tint — Compose has no backdrop blur
+            // primitive that works across API 26+, but 78 % opacity of
+            // the elevated canvas colour already reads as "floating"
+            // against scrolling list content underneath.
+            .background(OkaiwaColors.BlackElevated.copy(alpha = 0.78f))
+            .border(
+                width = 1.dp,
+                color = OkaiwaColors.BlackBorder.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(16.dp),
+            ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -140,13 +172,12 @@ private fun OkaiwaBottomBar(
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.TabItem(
+private fun RowScope.TabItem(
     tab: MainTab,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
     val tint = if (isSelected) OkaiwaColors.Lime else OkaiwaColors.Muted
-    val labelColor = if (isSelected) OkaiwaColors.Lime else OkaiwaColors.Muted
 
     Column(
         modifier = Modifier
@@ -170,7 +201,7 @@ private fun androidx.compose.foundation.layout.RowScope.TabItem(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = tab.label,
-            color = labelColor,
+            color = tint,
             fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
         )
