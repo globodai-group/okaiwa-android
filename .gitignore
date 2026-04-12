@@ -45,6 +45,8 @@ Thumbs.db
 *.class
 *.jar
 *.war
+# Gradle wrapper JAR must be committed so ./gradlew works without a system Gradle
+!gradle/wrapper/gradle-wrapper.jar
 
 # Logs
 *.log
