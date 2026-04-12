@@ -21,8 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
@@ -153,21 +153,23 @@ fun ConversationListScreen(
             }
         }
 
-        // FAB — lime pill pinned above the floating bar. We add a small
-        // gutter (4 dp) on top of the bar's reserved inset so the FAB
-        // visually sits "on" the bar, not touching it.
+        // FAB — rounded square lime tile above the floating bar. The
+        // default Material 3 FAB shape is a 16 dp rounded square, which
+        // matches the language of every other surface (Welcome CTAs,
+        // floating nav bar itself). The earlier circle + pencil icon
+        // drifted from that language; a chat bubble reads more directly
+        // as "new conversation".
         FloatingActionButton(
             onClick = onNavigateToNewConversation,
             containerColor = OkaiwaColors.Lime,
             contentColor = OkaiwaColors.Black,
-            shape = CircleShape,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 20.dp, bottom = floatingBarInset + 4.dp)
                 .size(56.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.Create,
+                imageVector = Icons.AutoMirrored.Filled.Chat,
                 contentDescription = "Nouvelle conversation",
             )
         }
