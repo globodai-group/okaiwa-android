@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.okaiwa.core.navigation.LocalFloatingBarPadding
 import io.okaiwa.core.theme.OkaiwaColors
 
 /**
@@ -55,6 +56,8 @@ fun WalletOnboardingScreen(
     onCreateWallet: () -> Unit,
     onImportWallet: () -> Unit,
 ) {
+    val floatingBarInset = LocalFloatingBarPadding.current.calculateBottomPadding()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -123,7 +126,10 @@ fun WalletOnboardingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp),
+                    // Sit above the floating tab bar — without this
+                    // offset the lime button slid under the bar and
+                    // "Importer un wallet" was cut in half by it.
+                    .padding(bottom = floatingBarInset),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Button(
