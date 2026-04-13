@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Okaiwa. This document provides gu
 ### Building
 
 ```bash
-git clone https://github.com/globodai-group/okaiwa-android.git
+git clone https://github.com/okaiwa/okaiwa-android.git
 cd okaiwa-android
 ./gradlew assembleDebug
 ```

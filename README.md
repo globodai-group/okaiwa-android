@@ -30,7 +30,7 @@ Okaiwa is a privacy-first communication platform that combines end-to-end encryp
 
 ```bash
 # Clone the repository
-git clone https://github.com/globodai-group/okaiwa-android.git
+git clone https://github.com/okaiwa/okaiwa-android.git
 cd okaiwa-android
 
 # Build debug APK
