@@ -3,6 +3,7 @@ package io.okaiwa.features.discovery.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.okaiwa.features.auth.data.session.SessionStore
 import io.okaiwa.features.chat.domain.repositories.ChatRepository
 import io.okaiwa.features.discovery.data.remote.DiscoveredUser
 import io.okaiwa.features.discovery.data.remote.DiscoveryApi
@@ -31,6 +32,7 @@ import javax.inject.Inject
 class DiscoverySearchViewModel @Inject constructor(
     private val discoveryApi: DiscoveryApi,
     private val chatRepository: ChatRepository,
+    private val sessionStore: SessionStore,
 ) : ViewModel() {
 
     sealed interface State {
@@ -89,6 +91,21 @@ class DiscoverySearchViewModel @Inject constructor(
      * see [io.okaiwa.features.chat.data.repositories.RemoteChatRepository.sendMessage].
      */
     fun startConversation(user: DiscoveredUser, onReady: (conversationId: String) -> Unit) {
+        // Block the user-taps-own-handle case up front. libsignal
+        // doesn't model a "note to self" conversation (a single
+        // device trying to encrypt + decrypt against its own
+        // identityKey would hang on its own ratchet advance), and
+        // even if it did, the discovery → sendMessage path would
+        // then 400 at the relay's recipientDeviceId==senderDeviceId
+        // guard. Surfacing an explicit message here beats silently
+        // failing deeper in the stack.
+        val selfAccountId = sessionStore.current()?.accountId
+        if (!selfAccountId.isNullOrEmpty() && selfAccountId == user.accountId) {
+            _state.value = State.Error(
+                "Vous ne pouvez pas démarrer une conversation avec votre propre compte",
+            )
+            return
+        }
         viewModelScope.launch {
             runCatching { chatRepository.createConversationFromDiscovery(user) }
                 .onSuccess { conv -> onReady(conv.id) }

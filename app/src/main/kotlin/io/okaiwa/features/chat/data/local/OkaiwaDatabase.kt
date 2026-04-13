@@ -46,14 +46,19 @@ abstract class OkaiwaDatabase : RoomDatabase() {
     companion object {
         /** Build the singleton instance. DI provides this once at app scope. */
         fun build(context: Context): OkaiwaDatabase {
-            // sqlcipher-android 4.6+ auto-loads its native .so via the
-            // SQLiteDatabase class's static initializer — the explicit
-            // SQLiteDatabase.loadLibs(context) of the 4.5-era tutorials
-            // is no longer in the API (verified against sqlcipher-android
-            // 4.14.1 in our cache). The SupportOpenHelperFactory below
-            // touches the class which triggers the static init — first
-            // chat open is therefore safe without an explicit load. The
-            // review's P0 callout was based on the older API.
+            // Explicitly load libsqlcipher.so BEFORE handing a
+            // SupportOpenHelperFactory to Room. The previous comment
+            // claimed SupportOpenHelperFactory triggered the static
+            // init in net.zetetic.database.sqlcipher.SQLiteDatabase,
+            // but that's wrong — only touching SQLiteDatabase itself
+            // does, and Room opens the connection via
+            // SQLiteConnection.nativeOpen which is a raw JNI method.
+            // Without the explicit load, every first-chat-open throws
+            // `UnsatisfiedLinkError: No implementation found for long
+            // net.zetetic.database.sqlcipher.SQLiteConnection.nativeOpen`
+            // (reported from the field on APK 1.5.57).
+            System.loadLibrary("sqlcipher")
+
             val passphrase = loadOrGeneratePassphrase(context)
             val factory = SupportOpenHelperFactory(passphrase)
             return Room.databaseBuilder(
