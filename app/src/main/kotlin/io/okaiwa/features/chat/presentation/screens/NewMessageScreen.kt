@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.chat.presentation.viewmodels.ConversationListViewModel
+import io.okaiwa.features.discovery.presentation.DiscoverySearchViewModel
 import java.util.concurrent.TimeUnit
 
 /**
@@ -75,9 +76,11 @@ fun NewMessageScreen(
     onCreateGroup: () -> Unit = {},
     onCreateChannel: () -> Unit = {},
     viewModel: ConversationListViewModel = hiltViewModel(),
+    discoveryVm: DiscoverySearchViewModel = hiltViewModel(),
 ) {
     val conversationsState by viewModel.uiState.collectAsState()
     var query by remember { mutableStateOf("") }
+    val discoveryState by discoveryVm.state.collectAsState()
 
     // Flatten the 1:1 conversations into an Okaiwa contact list so the
     // user can start a fresh thread without opening the existing one.
@@ -111,7 +114,30 @@ fun NewMessageScreen(
             .navigationBarsPadding(),
     ) {
         TopBar(onBack = onBack)
-        SearchField(value = query, onValueChange = { query = it })
+        SearchField(
+            value = query,
+            onValueChange = {
+                query = it
+                discoveryVm.onQueryChanged(it)
+            },
+        )
+
+        // Real-time discovery — when the user types a username (3+
+        // chars), the backend's GET /v1/discovery/username/:username is
+        // hit after a 300 ms idle window. Match → "Démarrer" pill row.
+        // No match → an explicit "Aucun utilisateur" line so the user
+        // knows to invite the contact instead.
+        DiscoveryResultRow(
+            state = discoveryState,
+            onStartConversation = { user ->
+                // accountId is the deviceId target on the relay; we'll
+                // upgrade to a true Conversation entity once Signal
+                // session establishment is wired. For now we re-use
+                // the existing onStartConversation hook so the chat
+                // screen opens against the discovered identity.
+                onStartConversation(user.accountId)
+            },
+        )
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
@@ -343,5 +369,90 @@ private fun lastSeenLabel(timestamp: Long): String {
         hours < 24 -> "en ligne il y a ${hours} h"
         days < 7 -> "vu il y a $days j"
         else -> "vu récemment"
+    }
+}
+
+@Composable
+private fun DiscoveryResultRow(
+    state: DiscoverySearchViewModel.State,
+    onStartConversation: (io.okaiwa.features.discovery.data.remote.DiscoveredUser) -> Unit,
+) {
+    when (state) {
+        DiscoverySearchViewModel.State.Idle -> Unit
+
+        DiscoverySearchViewModel.State.Searching -> {
+            Text(
+                text = "Recherche…",
+                color = OkaiwaColors.Muted,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        DiscoverySearchViewModel.State.NotFound -> {
+            Text(
+                text = "Aucun utilisateur Okaiwa pour cet identifiant.",
+                color = OkaiwaColors.Muted,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
+
+        is DiscoverySearchViewModel.State.Error -> {
+            Text(
+                text = state.message,
+                color = OkaiwaColors.Error,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
+
+        is DiscoverySearchViewModel.State.Found -> {
+            val user = state.user
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onStartConversation(user) }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(OkaiwaColors.Lime.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = user.username?.firstOrNull()?.uppercase() ?: "@",
+                        color = OkaiwaColors.Lime,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = user.profile?.displayName ?: user.username.orEmpty(),
+                        color = OkaiwaColors.White,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "@${user.username.orEmpty()}",
+                        color = OkaiwaColors.Muted,
+                        fontSize = 12.sp,
+                    )
+                }
+                Text(
+                    text = "Démarrer",
+                    color = OkaiwaColors.Black,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(OkaiwaColors.Lime)
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                )
+            }
+        }
     }
 }

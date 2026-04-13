@@ -90,6 +90,13 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideDiscoveryApi(
+        retrofit: Retrofit,
+    ): io.okaiwa.features.discovery.data.remote.DiscoveryApi =
+        retrofit.create(io.okaiwa.features.discovery.data.remote.DiscoveryApi::class.java)
 }
 
 /**
