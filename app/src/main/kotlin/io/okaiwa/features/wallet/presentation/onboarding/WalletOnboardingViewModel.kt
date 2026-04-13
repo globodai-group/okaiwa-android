@@ -12,17 +12,22 @@ import javax.inject.Inject
 /**
  * Linear state machine for the "Créer un wallet" onboarding.
  *
- * The steps are rendered by [WalletOnboardingFlow]; this view-model
- * holds the draft wallet state (chosen method, generated mnemonic,
- * verification indices, name) and exposes the active step so nav
- * transitions stay inside the composable without polluting the
- * NavHost with six throwaway routes.
+ * The steps are rendered by [WalletOnboardingFlow]. The VM branches
+ * the flow based on the chosen [WalletCreationMethod]:
+ *
+ *   SeedPhrase → Method → Tips → SeedDisplay → SeedVerify → Name → Ready
+ *   Passkey    → Method → Tips → PasskeyCreation              → Name → Ready
+ *
+ * The passkey branch skips seed display + verification because the
+ * private key lives inside the Secure Enclave / StrongBox; the user
+ * authenticates with biometrics and there is nothing to write down.
  */
 enum class WalletOnboardingStep {
     Method,
     SecurityTips,
     SeedPhraseDisplay,
     SeedPhraseVerify,
+    PasskeyCreation,
     NameWallet,
     Ready,
 }
@@ -47,6 +52,7 @@ data class WalletOnboardingUiState(
     val verifyIndices: List<Int> = emptyList(),
     val walletName: String = "",
     val savedToPasswordManager: Boolean = false,
+    val passkeyRegistered: Boolean = false,
 )
 
 @HiltViewModel
@@ -60,20 +66,26 @@ class WalletOnboardingViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onSecurityTipsAccepted() {
-        val mnemonic = MockMnemonicGenerator.generate24()
-        // Three evenly-spread positions make verification look like
-        // Ledger / Trezor: you're never asked for two adjacent words.
-        val verifyIndices = listOf(
-            (2..7).random(),
-            (10..15).random(),
-            (18..23).random(),
-        )
-        _uiState.update {
-            it.copy(
-                mnemonic = mnemonic,
-                verifyIndices = verifyIndices,
-                step = WalletOnboardingStep.SeedPhraseDisplay,
-            )
+        when (_uiState.value.method) {
+            WalletCreationMethod.SeedPhrase -> {
+                val mnemonic = MockMnemonicGenerator.generate24()
+                val verifyIndices = listOf(
+                    (2..7).random(),
+                    (10..15).random(),
+                    (18..23).random(),
+                )
+                _uiState.update {
+                    it.copy(
+                        mnemonic = mnemonic,
+                        verifyIndices = verifyIndices,
+                        step = WalletOnboardingStep.SeedPhraseDisplay,
+                    )
+                }
+            }
+
+            WalletCreationMethod.Passkey -> {
+                _uiState.update { it.copy(step = WalletOnboardingStep.PasskeyCreation) }
+            }
         }
     }
 
@@ -83,6 +95,13 @@ class WalletOnboardingViewModel @Inject constructor() : ViewModel() {
 
     fun onVerificationSuccess() {
         _uiState.update { it.copy(step = WalletOnboardingStep.NameWallet) }
+    }
+
+    /** Called by the passkey step after the system biometric prompt. */
+    fun onPasskeyCreated() {
+        _uiState.update {
+            it.copy(passkeyRegistered = true, step = WalletOnboardingStep.NameWallet)
+        }
     }
 
     fun setWalletName(name: String) {
@@ -100,12 +119,17 @@ class WalletOnboardingViewModel @Inject constructor() : ViewModel() {
     /** Navigate back one step — used by the top-bar back arrow. */
     fun previousStep(): Boolean {
         val current = _uiState.value.step
+        val method = _uiState.value.method
         val previous = when (current) {
             WalletOnboardingStep.Method -> return false
             WalletOnboardingStep.SecurityTips -> WalletOnboardingStep.Method
             WalletOnboardingStep.SeedPhraseDisplay -> WalletOnboardingStep.SecurityTips
             WalletOnboardingStep.SeedPhraseVerify -> WalletOnboardingStep.SeedPhraseDisplay
-            WalletOnboardingStep.NameWallet -> WalletOnboardingStep.SeedPhraseVerify
+            WalletOnboardingStep.PasskeyCreation -> WalletOnboardingStep.SecurityTips
+            WalletOnboardingStep.NameWallet -> when (method) {
+                WalletCreationMethod.SeedPhrase -> WalletOnboardingStep.SeedPhraseVerify
+                WalletCreationMethod.Passkey -> WalletOnboardingStep.PasskeyCreation
+            }
             WalletOnboardingStep.Ready -> return false
         }
         _uiState.update { it.copy(step = previous) }

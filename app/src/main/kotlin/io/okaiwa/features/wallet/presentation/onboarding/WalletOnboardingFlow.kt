@@ -112,6 +112,7 @@ fun WalletOnboardingFlow(
             )
 
             WalletOnboardingStep.SecurityTips -> SecurityTipsStep(
+                method = uiState.method,
                 onAccept = { viewModel.onSecurityTipsAccepted() },
                 onBack = { if (!viewModel.previousStep()) onCancel() },
             )
@@ -128,6 +129,11 @@ fun WalletOnboardingFlow(
                 mnemonic = uiState.mnemonic,
                 verifyIndices = uiState.verifyIndices,
                 onSuccess = viewModel::onVerificationSuccess,
+                onBack = { viewModel.previousStep() },
+            )
+
+            WalletOnboardingStep.PasskeyCreation -> PasskeyCreationStep(
+                onCreated = viewModel::onPasskeyCreated,
                 onBack = { viewModel.previousStep() },
             )
 
@@ -297,13 +303,26 @@ private fun MethodCard(
 // ─────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SecurityTipsStep(onAccept: () -> Unit, onBack: () -> Unit) {
-    val tips = remember {
-        listOf(
-            "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.",
-            "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager avec qui que ce soit.",
-            "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. Aucun support, aucun backup serveur : la sécurité dépend entièrement de moi.",
-        )
+private fun SecurityTipsStep(
+    method: WalletCreationMethod,
+    onAccept: () -> Unit,
+    onBack: () -> Unit,
+) {
+    // Copy differs per method so the user sees the security trade-offs
+    // of the path they actually chose.
+    val tips = remember(method) {
+        when (method) {
+            WalletCreationMethod.SeedPhrase -> listOf(
+                "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.",
+                "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager avec qui que ce soit.",
+                "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. Aucun support, aucun backup serveur : la sécurité dépend entièrement de moi.",
+            )
+            WalletCreationMethod.Passkey -> listOf(
+                "La clé privée est générée dans la StrongBox de mon téléphone. Elle ne quitte jamais l'appareil en clair et ne sera accessible qu'avec mon empreinte ou Face ID.",
+                "La sauvegarde chiffrée est synchronisée via Google Password Manager (Android) ou iCloud Keychain (iOS). Je peux donc récupérer mon wallet sur un nouveau téléphone en m'authentifiant.",
+                "Si je supprime la clé d'accès ET que je perds l'accès à mon compte Google/Apple, je perdrai mes fonds. Okaiwa n'a aucun backup de secours.",
+            )
+        }
     }
     val checked = remember { mutableStateListOf(false, false, false) }
     val allChecked = checked.all { it }
@@ -691,6 +710,123 @@ private data class VerifyChallenge(
 )
 
 private data class IndexedWord(val index: Int, val word: String)
+
+// ─────────────────────────────────────────────────────────────────────
+// Step 4b — Passkey creation (alternative to steps 3 + 4 on the
+//           passkey branch; skips seed display and verification).
+// ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun PasskeyCreationStep(onCreated: () -> Unit, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var isCreating by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopBar(title = "Clé d'accès", onBack = onBack)
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // StrongBox medallion — the visual stand-in for the
+            // platform biometric + hardware-keyed signing module.
+            Box(
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(OkaiwaColors.Lime.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = null,
+                    tint = OkaiwaColors.Lime,
+                    modifier = Modifier.size(60.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Créez votre clé d'accès",
+                color = OkaiwaColors.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Votre téléphone va vous demander de confirmer avec votre empreinte ou Face ID. La clé privée reste dans la StrongBox — Okaiwa ne la voit jamais.",
+                color = OkaiwaColors.Muted,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Benefit list — complement to the security tips already
+            // accepted on the previous step.
+            PasskeyBenefitRow("Génération matérielle", "Clé signée par la StrongBox, non exportable.")
+            PasskeyBenefitRow("Sauvegarde cloud chiffrée", "Sync Google Password Manager / iCloud Keychain pour la récupération multi-appareil.")
+            PasskeyBenefitRow("Pas de phrase à retenir", "Biométrie suffit — aucun mot de passe ni mnémonique à noter.")
+        }
+
+        PrimaryButton(
+            label = if (isCreating) "Création…" else "Créer avec biométrie",
+            enabled = !isCreating,
+            onClick = {
+                isCreating = true
+                scope.launch {
+                    // Real impl: CredentialManager.createCredential(
+                    //   CreatePublicKeyCredentialRequest(webAuthnOptionsJson))
+                    // which triggers the platform biometric prompt and
+                    // registers a passkey with the backing cloud provider.
+                    // Mock: fake delay then continue.
+                    kotlinx.coroutines.delay(800)
+                    onCreated()
+                }
+            },
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+        )
+    }
+}
+
+@Composable
+private fun PasskeyBenefitRow(title: String, subtitle: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = OkaiwaColors.Lime,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = OkaiwaColors.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = subtitle,
+                color = OkaiwaColors.Muted,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+            )
+        }
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // Step 5 — Wallet name
