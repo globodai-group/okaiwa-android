@@ -20,6 +20,32 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE peerDeviceId = :peerDeviceId LIMIT 1")
     suspend fun findByPeerDeviceId(peerDeviceId: String): ConversationEntity?
 
+    /**
+     * Find a conversation pinned to the given identityKey whose
+     * peerAccountId is NOT the one we're about to create the row for.
+     * Used by the polling service to refuse creating a second
+     * conversation under accountId `X` that would pin an identityKey
+     * already bound to accountId `Y` — a hostile relay rewriting
+     * `envelope.senderAccountId` can forward Alice's blob to Bob with
+     * `senderAccountId = Mallory` and libsignal decrypts fine against
+     * Alice's session. Without this guard we'd silently create a
+     * `Mallory` conversation whose identityKey is actually Alice's,
+     * letting the attacker impersonate any existing contact (sender
+     * spoofing, P0 from the polling security review).
+     */
+    @Query(
+        """
+        SELECT * FROM conversations
+         WHERE peerIdentityKey = :peerIdentityKey
+           AND peerAccountId <> :excludeAccountId
+         LIMIT 1
+        """,
+    )
+    suspend fun findByIdentityKeyExcluding(
+        peerIdentityKey: String,
+        excludeAccountId: String,
+    ): ConversationEntity?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(conversation: ConversationEntity)
 

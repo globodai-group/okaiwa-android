@@ -4,8 +4,10 @@ import android.content.Context
 import android.util.Base64
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import androidx.sqlite.db.SupportSQLiteDatabase
 import io.okaiwa.core.config.AppConfig
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import java.security.SecureRandom
@@ -31,13 +33,15 @@ import java.security.SecureRandom
     entities = [
         ConversationEntity::class,
         MessageEntity::class,
+        DeadLetterCountEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class OkaiwaDatabase : RoomDatabase() {
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
+    abstract fun deadLetterCountDao(): DeadLetterCountDao
 
     companion object {
         /** Build the singleton instance. DI provides this once at app scope. */
@@ -58,11 +62,37 @@ abstract class OkaiwaDatabase : RoomDatabase() {
                 AppConfig.DATABASE_NAME,
             )
                 .openHelperFactory(factory)
-                // Destructive migration is fine for now — the schema is
-                // net-new and version = 1. Once we ship to users we'll
-                // swap for real .addMigrations(...) steps.
+                .addMigrations(MIGRATION_1_2)
+                // Destructive fallback for unknown versions only.
+                // Real upgrades go through the explicit Migration
+                // objects above — we'd rather drop unknown schemas
+                // than silently ship an inconsistent DB to users.
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
+        }
+
+        /**
+         * v1 → v2 : add the persisted dead-letter counter table.
+         *
+         * The in-memory `ConcurrentHashMap` reset on every cold start
+         * let a hostile relay loop poison envelopes indefinitely by
+         * waiting for the app to be killed (P1 from the polling
+         * security review). Persisting inside the already-encrypted
+         * SQLCipher DB closes the hole without additional key
+         * material.
+         */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS dead_letter_counts (
+                        messageId TEXT PRIMARY KEY NOT NULL,
+                        count INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+            }
         }
 
         private const val PREFS_FILE = "okaiwa_db_passphrase"

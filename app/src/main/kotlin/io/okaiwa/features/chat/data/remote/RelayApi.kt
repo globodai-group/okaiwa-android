@@ -61,6 +61,23 @@ data class SendMessageRequest(
     val blob: String,
     /** Client-generated idempotency key (UUID). */
     val messageId: String,
+    /**
+     * Required by the relay validator since okaiwa-server@dc897f1.
+     * The backend cross-checks this against the deviceToken's embedded
+     * deviceId and rejects the request with 401 on mismatch, so the
+     * peer always knows which device the message originated from
+     * (needed for session lookup on their side) and a stolen
+     * deviceToken can't be used to impersonate another device.
+     */
+    val senderDeviceId: String,
+    /**
+     * Required by the relay validator. Carried in cleartext so the
+     * receiver can route storage without a round-trip to discovery.
+     * The receiver MUST cross-check this against the decrypted
+     * identityKey (handled in MessagePollingService.resolveOrCreate-
+     * Conversation's spoof-defense branch).
+     */
+    val senderAccountId: String,
 )
 
 @Serializable

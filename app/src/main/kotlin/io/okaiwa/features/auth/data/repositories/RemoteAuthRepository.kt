@@ -15,6 +15,7 @@ import io.okaiwa.features.auth.data.session.Session
 import io.okaiwa.features.auth.data.session.SessionStore
 import io.okaiwa.features.auth.domain.entities.User
 import io.okaiwa.features.auth.domain.repositories.AuthRepository
+import io.okaiwa.features.chat.data.local.OkaiwaDatabase
 import io.okaiwa.features.keys.data.remote.KeyApi
 import io.okaiwa.features.keys.data.remote.PreKeyDto
 import io.okaiwa.features.keys.data.remote.UploadPreKeysRequest
@@ -54,6 +55,7 @@ class RemoteAuthRepository @Inject constructor(
     private val keyApi: KeyApi,
     private val sessionStore: SessionStore,
     private val signalIdentityKeys: SignalIdentityKeys,
+    private val database: OkaiwaDatabase,
 ) : AuthRepository {
 
     override fun observeCurrentUser(): Flow<User?> =
@@ -245,12 +247,42 @@ class RemoteAuthRepository @Inject constructor(
     }
 
     override suspend fun signOut() {
-        sessionStore.clear()
+        wipeDeviceState()
     }
 
     override suspend fun deleteAccount() {
         // DELETE /v1/profile + DELETE /v1/auth/account land on the
         // server next. For now sign-out is the user-facing effect.
+        wipeDeviceState()
+    }
+
+    /**
+     * Full wipe of every on-device artefact bound to the current
+     * account — closes the cross-account leak P1 flagged in the
+     * polling security review: without this, a sign-out followed by
+     * a re-auth with a different phone on the same device would
+     * inherit the previous user's libsignal identity, established
+     * Signal sessions, pinned peer identityKeys, conversation rows,
+     * and decrypted message bodies sitting in the SQLCipher DB.
+     *
+     * Order matters:
+     *   1. Clear libsignal's persistent store — identity key pair,
+     *      signed / one-time / kyber pre-keys, peer sessions, pinned
+     *      identities.
+     *   2. Wipe Room (conversations + messages). `clearAllTables()`
+     *      issues DELETE-everything under a single transaction so a
+     *      concurrent reader sees an atomic "no data" snapshot.
+     *   3. Clear the session last — the onSessionFlow observer in
+     *      RemoteProfileRepository reacts to `null`, cancels its
+     *      in-flight fetch, and wipes the in-memory profile cache.
+     *      Doing this last means step 1+2 can't race with a new
+     *      account's post-verify writes.
+     */
+    private suspend fun wipeDeviceState() {
+        runCatching { signalIdentityKeys.clear() }
+            .onFailure { Log.w(TAG, "signal store clear threw: ${it::class.simpleName}") }
+        runCatching { database.clearAllTables() }
+            .onFailure { Log.w(TAG, "Room clearAllTables threw: ${it::class.simpleName}") }
         sessionStore.clear()
     }
 

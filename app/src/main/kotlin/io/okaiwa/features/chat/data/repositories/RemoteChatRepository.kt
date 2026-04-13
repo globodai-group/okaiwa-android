@@ -83,6 +83,14 @@ class RemoteChatRepository @Inject constructor(
             ?: error("No authenticated session — cannot send")
         val deviceToken = session.deviceToken.takeIf { it.isNotEmpty() }
             ?: error("No relay deviceToken — re-run OTP verify")
+        // senderDeviceId / senderAccountId on the relay envelope are
+        // cross-checked against the deviceToken's embedded deviceId on
+        // the backend (okaiwa-server@dc897f1). Sending empty strings
+        // would make every send return 401 "device mismatch" — surface
+        // a clean local error instead so the UI can trigger a re-auth.
+        if (session.deviceId.isEmpty() || session.accountId.isEmpty()) {
+            error("Session missing deviceId/accountId — re-run OTP verify")
+        }
 
         val conversation = conversationDao.findById(conversationId)
             ?: error("Conversation $conversationId not found")
@@ -110,6 +118,8 @@ class RemoteChatRepository @Inject constructor(
                     recipientDeviceId = conversation.peerDeviceId,
                     blob = blobBase64,
                     messageId = messageId,
+                    senderDeviceId = session.deviceId,
+                    senderAccountId = session.accountId,
                 ),
             )
         }.getOrElse {

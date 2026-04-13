@@ -6,6 +6,7 @@ import io.okaiwa.features.auth.data.crypto.SignalIdentityKeys
 import io.okaiwa.features.auth.data.session.SessionStore
 import io.okaiwa.features.chat.data.local.ConversationDao
 import io.okaiwa.features.chat.data.local.ConversationEntity
+import io.okaiwa.features.chat.data.local.DeadLetterCountDao
 import io.okaiwa.features.chat.data.local.DeliveryState
 import io.okaiwa.features.chat.data.local.MessageDao
 import io.okaiwa.features.chat.data.local.MessageEntity
@@ -21,6 +22,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.signal.libsignal.protocol.DuplicateMessageException
 import org.signal.libsignal.protocol.SessionCipher
 import org.signal.libsignal.protocol.SignalProtocolAddress
@@ -62,6 +65,7 @@ class MessagePollingService @Inject constructor(
     private val discoveryApi: DiscoveryApi,
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
+    private val deadLetterCountDao: DeadLetterCountDao,
     private val signalIdentityKeys: SignalIdentityKeys,
     private val sessionStore: SessionStore,
 ) {
@@ -70,15 +74,31 @@ class MessagePollingService @Inject constructor(
     private var pollingJob: Job? = null
 
     /**
-     * In-memory dead-letter counter — `messageId → consecutive
-     * decrypt failure count`. When a message can't be decrypted
-     * (corrupt blob, desynchronized session, malformed type byte)
-     * we DON'T ack on the first failure (might be a transient
-     * libsignal hiccup), but after [MAX_DECRYPT_RETRIES] we ack
-     * + log so the envelope stops looping forever and draining the
-     * poll. Cleared per-process — a fresh launch resets all counters
-     * which is fine: at-least-once still applies and the underlying
-     * issue (poison blob) will quickly hit the limit again.
+     * Serialises the spoof-defense `findByIdentityKeyExcluding`
+     * check + `insert` pair in [resolveOrCreateConversation]. Without
+     * it, two concurrent inbound envelopes from different accountIds
+     * that claim the same identityKey could both pass the collision
+     * check before either inserts — letting a hostile relay silently
+     * mint duplicate sessions for one peer's identity (TOCTOU, P1
+     * from the cross-platform security review).
+     *
+     * The poll loop itself is single-coroutine `forEach`, but any
+     * future concurrent consumer (a second `start()`, a direct
+     * `handleEnvelope` call from push-notification land, …) would
+     * reopen the window. A process-scoped mutex is cheap insurance.
+     */
+    private val resolveMutex = Mutex()
+
+    /**
+     * In-memory fallback for the persisted dead-letter counter.
+     * Populated only when a write to [deadLetterCountDao] fails (I/O
+     * error, DB locked) so the counter still eventually trips within
+     * the current process. The persisted counter in the SQLCipher
+     * `dead_letter_counts` table is the primary source of truth —
+     * the in-memory map used to be it, and reset on every cold start,
+     * which let a hostile relay loop the same poison envelope
+     * indefinitely by waiting for the app to be killed (P1 from the
+     * cross-platform polling security review).
      */
     private val decryptFailureCounts = ConcurrentHashMap<String, Int>()
 
@@ -127,13 +147,12 @@ class MessagePollingService @Inject constructor(
                         is DuplicateMessageException -> {
                             Log.d(TAG, "duplicate envelope — ack + drop")
                             ackEnvelope(envelope.messageId, deviceToken)
-                            decryptFailureCounts.remove(envelope.messageId)
+                            resetFailureCounter(envelope.messageId)
                         }
                         // Anything else: bump the counter, stop acking
                         // until we hit the dead-letter threshold.
                         else -> {
-                            val next = (decryptFailureCounts[envelope.messageId] ?: 0) + 1
-                            decryptFailureCounts[envelope.messageId] = next
+                            val next = bumpFailureCounter(envelope.messageId)
                             if (next >= MAX_DECRYPT_RETRIES) {
                                 Log.w(
                                     TAG,
@@ -141,7 +160,7 @@ class MessagePollingService @Inject constructor(
                                         "(${failure::class.simpleName}) — ack + drop"
                                 )
                                 ackEnvelope(envelope.messageId, deviceToken)
-                                decryptFailureCounts.remove(envelope.messageId)
+                                resetFailureCounter(envelope.messageId)
                             } else {
                                 Log.w(
                                     TAG,
@@ -153,6 +172,26 @@ class MessagePollingService @Inject constructor(
                     }
                 }
         }
+    }
+
+    /**
+     * Atomic bump + read on the persisted `dead_letter_counts` table.
+     * Falls back to the in-memory [decryptFailureCounts] ConcurrentHashMap
+     * on any DAO exception so the ceiling still trips within the
+     * current process even if the DB is transiently unavailable.
+     */
+    private suspend fun bumpFailureCounter(messageId: String): Int = runCatching {
+        deadLetterCountDao.bumpAndRead(messageId, System.currentTimeMillis())
+    }.getOrElse {
+        Log.w(TAG, "dead-letter bump failed: ${it::class.simpleName} — using in-memory fallback")
+        val next = (decryptFailureCounts[messageId] ?: 0) + 1
+        decryptFailureCounts[messageId] = next
+        next
+    }
+
+    private suspend fun resetFailureCounter(messageId: String) {
+        runCatching { deadLetterCountDao.reset(messageId) }
+        decryptFailureCounts.remove(messageId)
     }
 
     /**
@@ -169,24 +208,28 @@ class MessagePollingService @Inject constructor(
     }
 
     private suspend fun handleEnvelope(envelope: RelayEnvelope, deviceToken: String) {
+        // Drop+ack on malformed envelopes — the previous `return` path
+        // left the envelope on the server forever and let a hostile
+        // peer mint unlimited null-sender blobs to flood the inbox
+        // (DoS, shared P0 with iOS from the polling security review).
         val senderDeviceId = envelope.senderDeviceId
             ?: run {
-                Log.w(TAG, "envelope missing senderDeviceId — skip")
+                Log.w(TAG, "envelope missing senderDeviceId — ack + drop")
+                ackEnvelope(envelope.messageId, deviceToken)
                 return
             }
         val senderAccountId = envelope.senderAccountId
             ?: run {
-                // Discover by deviceId once we add a GET /discovery/device/:id
-                // endpoint. For now, log and skip — at-least-once semantics
-                // let us pick it up again.
-                Log.w(TAG, "envelope missing senderAccountId — skip (backend gap)")
+                Log.w(TAG, "envelope missing senderAccountId — ack + drop")
+                ackEnvelope(envelope.messageId, deviceToken)
                 return
             }
 
         val ciphertextBytes = Base64.decode(envelope.blob, Base64.NO_WRAP)
         val typeByte = ciphertextBytes.firstOrNull()?.toInt()
             ?: run {
-                Log.w(TAG, "empty ciphertext — skip")
+                Log.w(TAG, "empty ciphertext — ack + drop")
+                ackEnvelope(envelope.messageId, deviceToken)
                 return
             }
         val type = typeByte and 0x0F
@@ -207,7 +250,8 @@ class MessagePollingService @Inject constructor(
             CiphertextMessage.WHISPER_TYPE ->
                 null to SignalMessage(ciphertextBytes)
             else -> {
-                Log.w(TAG, "unknown ciphertext type $type — skip")
+                Log.w(TAG, "unknown ciphertext type $type — ack + drop")
+                ackEnvelope(envelope.messageId, deviceToken)
                 return
             }
         }
@@ -256,7 +300,7 @@ class MessagePollingService @Inject constructor(
         // crash is safe because MessageDao.insert uses ON CONFLICT IGNORE.
         // Successful decrypt → clear the failure counter so a future
         // unrelated envelope doesn't inherit the wrong count.
-        decryptFailureCounts.remove(envelope.messageId)
+        resetFailureCounter(envelope.messageId)
         ackEnvelope(envelope.messageId, deviceToken)
     }
 
@@ -264,31 +308,67 @@ class MessagePollingService @Inject constructor(
      * Find a conversation for the sender, or create a new one. On
      * first contact we pin the peer's identityKey extracted from the
      * PreKeySignalMessage so the next outbound-reply TOFU check has
-     * a real value to compare against (was empty string previously,
-     * which silently accepted any identity-key swap).
+     * a real value to compare against.
+     *
+     * Throws [IdentityChangedException] when the envelope carries an
+     * identityKey that contradicts the one we already pinned or that
+     * is already bound to a different accountId — either is a
+     * strong signal of MITM / sender spoofing, and letting the
+     * envelope land silently would let a hostile relay forward
+     * Alice's ciphertext under Mallory's accountId (Bob would render
+     * the message attributed to Mallory while the ratchet is
+     * actually Alice's). The outer poll loop treats this as a
+     * decrypt failure and the dead-letter counter eventually
+     * ack+drops the poison envelope.
      */
     private suspend fun resolveOrCreateConversation(
         senderAccountId: String,
         senderDeviceId: String,
         peerIdentityKeyB64: String?,
-    ): String {
+    ): String = resolveMutex.withLock {
         val existing = conversationDao.findByPeerAccountId(senderAccountId)
         if (existing != null) {
             // Second + inbound message in the same conv: the identity
             // key is already pinned. If we got a fresh
-            // PreKeySignalMessage (= peer rebuilt their session) and
-            // the key changed, refuse silently — the bubble surfaces
-            // a "safety number changed" error (UI lands later).
+            // PreKeySignalMessage (peer rebuilt their session) and
+            // the key changed, refuse — the bubble surfaces a
+            // "safety number changed" error once the UI lands.
             if (peerIdentityKeyB64 != null &&
                 existing.peerIdentityKey.isNotEmpty() &&
                 existing.peerIdentityKey != peerIdentityKeyB64
             ) {
-                Log.w(TAG, "peer identity changed — refusing to pin silently")
+                throw IdentityChangedException(
+                    "peer identity changed for conv ${existing.id} — refusing",
+                )
             }
             return existing.id
         }
 
         // First contact from this peer.
+        // WHISPER_TYPE for a brand-new peer is technically impossible
+        // (a Whisper message requires a pre-existing session), so the
+        // null pin is a poison envelope — dead-letter it.
+        val pinned = peerIdentityKeyB64
+            ?: throw IdentityChangedException(
+                "WHISPER first-contact for unknown peer $senderAccountId",
+            )
+
+        // Sender-spoofing defense: if ANOTHER accountId already has
+        // this identity key pinned, a hostile relay is forwarding
+        // someone else's ciphertext under this accountId. Libsignal
+        // would happily decrypt (the ratchet matches the real peer)
+        // and we'd render the message attributed to the wrong
+        // identity. Refuse and dead-letter.
+        val collision = conversationDao.findByIdentityKeyExcluding(
+            peerIdentityKey = pinned,
+            excludeAccountId = senderAccountId,
+        )
+        if (collision != null) {
+            throw IdentityChangedException(
+                "identity already bound to conv ${collision.id} — sender spoofing",
+            )
+        }
+
         val conversationId = UUID.randomUUID().toString()
         val entity = ConversationEntity(
             id = conversationId,
@@ -297,14 +377,7 @@ class MessagePollingService @Inject constructor(
             peerDisplayName = null,
             peerDeviceId = senderDeviceId,
             peerRegistrationId = 0,
-            // PIN the identity key right now — TOFU. peerIdentityKeyB64
-            // is null only on a WHISPER_TYPE first contact, which is
-            // technically impossible (a WHISPER message requires a
-            // pre-existing session). If it happens, log + skip.
-            peerIdentityKey = peerIdentityKeyB64 ?: run {
-                Log.w(TAG, "WHISPER first-contact for new peer — skip envelope")
-                return ""
-            },
+            peerIdentityKey = pinned,
         )
         conversationDao.insert(entity)
 
@@ -336,3 +409,14 @@ class MessagePollingService @Inject constructor(
         private const val MAX_DECRYPT_RETRIES = 5
     }
 }
+
+/**
+ * Signalled by [MessagePollingService] when a peer's identityKey
+ * contradicts what we already pinned, or when the same identityKey
+ * is already bound to a different accountId (sender spoofing). The
+ * outer poll loop treats this the same as any other decrypt failure
+ * — the dead-letter counter ack+drops the envelope after
+ * MAX_DECRYPT_RETRIES so a hostile relay can't loop the same poison
+ * blob indefinitely.
+ */
+class IdentityChangedException(message: String) : Exception(message)

@@ -337,6 +337,26 @@ class SignalIdentityKeys @Inject constructor(
 
     fun arePreKeysUploaded(): Boolean = identityStore.read()?.preKeysUploaded == true
 
+    /**
+     * Wipe every persisted Signal artefact: identity key pair,
+     * registration id, signed + one-time + kyber pre-keys, peer
+     * sessions, pinned identities, and the preKeysUploaded flag.
+     * Also drops the in-memory `InMemorySignalProtocolStore` cache so
+     * the next consumer calls [loadOrGenerate] fresh.
+     *
+     * Called from [RemoteAuthRepository.signOut] to close the
+     * cross-account leak P1 flagged on the polling security review:
+     * without this, a re-auth under a different phone on the same
+     * device would inherit the previous user's identity keys (and
+     * therefore keep decrypting inbound envelopes targeted at the
+     * previous identity).
+     */
+    @Synchronized
+    fun clear() {
+        identityStore.clear()
+        cachedStore = null
+    }
+
     companion object {
         /** Size of the one-time pre-key pool generated at first launch. */
         const val ONE_TIME_PRE_KEY_COUNT: Int = 100

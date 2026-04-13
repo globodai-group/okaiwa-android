@@ -148,6 +148,12 @@ object AppModule {
     fun provideMessageDao(
         db: io.okaiwa.features.chat.data.local.OkaiwaDatabase,
     ): io.okaiwa.features.chat.data.local.MessageDao = db.messageDao()
+
+    @Provides
+    @Singleton
+    fun provideDeadLetterCountDao(
+        db: io.okaiwa.features.chat.data.local.OkaiwaDatabase,
+    ): io.okaiwa.features.chat.data.local.DeadLetterCountDao = db.deadLetterCountDao()
 }
 
 /**
