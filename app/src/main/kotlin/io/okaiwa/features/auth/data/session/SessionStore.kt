@@ -19,6 +19,19 @@ import javax.inject.Singleton
  * the Android Keystore (AES-256/GCM, hardware-backed on StrongBox
  * devices) and held under the alias `_androidx_security_master_key_`.
  *
+ * Persistence policy by field:
+ *   - accountId, accessToken, refreshToken, expiresAt → on disk (encrypted)
+ *   - phoneHash → IN-MEMORY ONLY, never written to disk
+ *
+ * The phone hash is excluded from disk by design: it lets an attacker
+ * with EncryptedSharedPreferences read access (rooted device, malware
+ * with elevated privileges) confirm the device owner's phone number
+ * by hashing every candidate E.164 number and comparing — a small,
+ * cheap brute-force against a 12-digit space. Keeping it in RAM means
+ * a clean app launch on a known device starts with a null phoneHash
+ * and the user is asked for their number again before /v1/auth/verify
+ * can be called.
+ *
  * A single-source in-memory StateFlow (`sessionFlow`) mirrors the
  * persisted pair so Compose screens can observe sign-in/out without
  * polling SharedPreferences.
@@ -52,7 +65,6 @@ class SessionStore @Inject constructor(
             .putString(KEY_REFRESH, session.refreshToken)
             .putLong(KEY_EXPIRES_AT, session.expiresAtEpochSeconds)
             .putString(KEY_ACCOUNT_ID, session.accountId)
-            .putString(KEY_PHONE_HASH, session.phoneHash)
             .apply()
         _sessionFlow.value = session
     }
@@ -66,11 +78,14 @@ class SessionStore @Inject constructor(
         val access = prefs.getString(KEY_ACCESS, null) ?: return null
         val refresh = prefs.getString(KEY_REFRESH, null) ?: return null
         val accountId = prefs.getString(KEY_ACCOUNT_ID, null) ?: return null
-        val phoneHash = prefs.getString(KEY_PHONE_HASH, null) ?: return null
         val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
+        // phoneHash is intentionally not restored from disk — see the
+        // class kdoc. The session is hydrated without it; the verify
+        // step will fail until the user re-enters the phone, which
+        // calls register() again and refreshes the in-memory hash.
         return Session(
             accountId = accountId,
-            phoneHash = phoneHash,
+            phoneHash = "",
             accessToken = access,
             refreshToken = refresh,
             expiresAtEpochSeconds = expiresAt,
@@ -83,7 +98,6 @@ class SessionStore @Inject constructor(
         private const val KEY_REFRESH = "refresh_token"
         private const val KEY_EXPIRES_AT = "expires_at_epoch_seconds"
         private const val KEY_ACCOUNT_ID = "account_id"
-        private const val KEY_PHONE_HASH = "phone_hash"
     }
 }
 
