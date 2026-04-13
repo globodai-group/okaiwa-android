@@ -97,21 +97,28 @@ fun AppNavigation(
         modifier = modifier,
     ) {
         composable(Screen.Splash.route) {
-            // Read the persisted session ONCE at splash time so the
-            // entry route reflects whether the user is already
-            // authenticated. Logic is centralized in SessionGateViewModel
-            // so the routing matrix has a single source of truth.
+            // SessionGateViewModel runs the routing matrix, including
+            // the async server check that covers the reinstall path
+            // (local flag says "needs ProfileSetup" but the server
+            // already has the username — go straight to Main).
             val gate: SessionGateViewModel = hiltViewModel()
-            SplashScreen(onFinished = {
-                val target = when {
-                    gate.session?.isVerified != true -> Screen.Welcome.route
-                    !gate.session.profileSetupDone -> Screen.ProfileSetup.route
-                    else -> Screen.Main.route
+            val route by gate.route.collectAsState()
+            var splashComplete by rememberSaveable { mutableStateOf(false) }
+
+            SplashScreen(onFinished = { splashComplete = true })
+
+            LaunchedEffect(splashComplete, route) {
+                val resolved = route ?: return@LaunchedEffect
+                if (!splashComplete) return@LaunchedEffect
+                val target = when (resolved) {
+                    SessionGateViewModel.Route.Welcome -> Screen.Welcome.route
+                    SessionGateViewModel.Route.Main -> Screen.Main.route
+                    SessionGateViewModel.Route.ProfileSetup -> Screen.ProfileSetup.route
                 }
                 navController.navigate(target) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }
-            })
+            }
         }
 
         composable(Screen.Welcome.route) {
