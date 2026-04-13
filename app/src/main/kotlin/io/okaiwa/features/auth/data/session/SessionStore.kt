@@ -81,6 +81,7 @@ class SessionStore @Inject constructor(
             deviceId = session.deviceId,
             deviceToken = session.deviceToken,
             profileSetupDone = session.profileSetupDone,
+            phoneE164 = session.phoneE164,
         )
         val ok = prefs.edit()
             .putString(KEY_SESSION_BLOB, json.encodeToString(PersistedSession.serializer(), persisted))
@@ -139,6 +140,7 @@ class SessionStore @Inject constructor(
             deviceId = persisted.deviceId,
             deviceToken = persisted.deviceToken,
             profileSetupDone = persisted.profileSetupDone,
+            phoneE164 = persisted.phoneE164,
         )
     }
 
@@ -172,6 +174,7 @@ private data class PersistedSession(
     val deviceId: String,
     val deviceToken: String,
     val profileSetupDone: Boolean,
+    val phoneE164: String = "",
 )
 
 /**
@@ -199,6 +202,15 @@ data class Session(
      * between ProfileSetup and Main on cold start.
      */
     val profileSetupDone: Boolean = false,
+    /**
+     * The user's own E.164 phone number, persisted on disk (encrypted)
+     * so the Profile tab can display it without round-tripping through
+     * the server (which only stores the hash). Same trust boundary as
+     * the access token — disk read requires Keystore unlock anyway,
+     * and the user can already see their number in the system settings
+     * so leaking via app data is no worse than leaking via Settings.
+     */
+    val phoneE164: String = "",
 ) {
     val isFresh: Boolean
         get() = System.currentTimeMillis() / 1000L < expiresAtEpochSeconds

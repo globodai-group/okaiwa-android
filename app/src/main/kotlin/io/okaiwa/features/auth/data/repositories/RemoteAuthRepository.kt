@@ -90,6 +90,7 @@ class RemoteAuthRepository @Inject constructor(
                 expiresAtEpochSeconds = 0L,
                 deviceId = body.deviceId ?: "",
                 deviceToken = "",
+                phoneE164 = phoneNumber,
             )
         )
 
@@ -113,6 +114,7 @@ class RemoteAuthRepository @Inject constructor(
             expiresAtEpochSeconds = (System.currentTimeMillis() / 1000L) + body.expiresIn,
             deviceId = body.deviceId ?: pending.deviceId,
             deviceToken = body.deviceToken ?: "",
+            phoneE164 = pending.phoneE164,
         ).toUserStub()
     }
 
@@ -142,6 +144,7 @@ class RemoteAuthRepository @Inject constructor(
                 expiresAtEpochSeconds = 0L,
                 deviceId = "",
                 deviceToken = "",
+                phoneE164 = phoneNumber,
             )
         )
         return body.accountId
@@ -202,6 +205,8 @@ class RemoteAuthRepository @Inject constructor(
                 // MAX_TOKEN_AGE_SECONDS check). Keep the existing one.
                 deviceId = tokens.deviceId ?: previous?.deviceId.orEmpty(),
                 deviceToken = tokens.deviceToken ?: previous?.deviceToken.orEmpty(),
+                phoneE164 = previous?.phoneE164.orEmpty(),
+                profileSetupDone = previous?.profileSetupDone == true,
             )
         )
     }

@@ -99,7 +99,7 @@ class RemoteProfileRepository @Inject constructor(
         if (!response.isSuccessful) return
         val body = response.body() ?: return
 
-        state.value = body.toUserProfile(phoneFallback = session.phoneHash)
+        state.value = body.toUserProfile(phoneE164 = session.phoneE164)
     }
 
     /**
@@ -139,13 +139,15 @@ class RemoteProfileRepository @Inject constructor(
 }
 
 /**
- * Map the wire-format response into the domain UserProfile. The phone
- * number isn't returned by /profile/me (the server only knows the
- * hash), so we surface the in-memory phoneHash as a placeholder until
- * the user opts to re-derive their formatted number locally.
+ * Map the wire-format response into the domain UserProfile.
+ *
+ * The phone number isn't returned by `/profile/me` — the server only
+ * stores its SHA-256 hash. We surface the device-local copy stashed
+ * in the SessionStore at register time so the Profile tab shows the
+ * user's own number without a server roundtrip.
  */
 private fun io.okaiwa.features.profile.data.remote.MyProfileResponse.toUserProfile(
-    phoneFallback: String,
+    phoneE164: String,
 ): UserProfile {
     val handle = username?.let { "@$it" } ?: "@—"
     return UserProfile(
@@ -154,7 +156,7 @@ private fun io.okaiwa.features.profile.data.remote.MyProfileResponse.toUserProfi
             ?: username
             ?: "Compte Okaiwa",
         username = handle,
-        phoneNumberE164 = if (phoneFallback.isNotEmpty()) "" else "",
+        phoneNumberE164 = phoneE164,
         bio = profile?.bio,
         avatarUrl = profile?.avatarUrl,
         isVerified = false,
