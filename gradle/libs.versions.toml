@@ -19,6 +19,19 @@ activity-compose = "1.9.3"
 core-ktx = "1.15.0"
 google-services = "4.4.2"
 credentials = "1.3.0"
+# Signal Foundation libsignal — Signal Protocol (Curve25519 + Double Ratchet + PQXDH).
+# 0.76.7 is the latest tagged release on Maven Central (org.signal:libsignal-android).
+# Ships the JNI wrapper + libsignal_jni native .so for arm64-v8a, armeabi-v7a, x86_64.
+libsignal = "0.76.7"
+# Trust Wallet wallet-core — BIP-39 mnemonic + multi-chain HD derivation.
+# Hosted on GitHub Packages (https://maven.pkg.github.com/trustwallet/wallet-core),
+# NOT Maven Central — resolution requires a GITHUB_TOKEN with read:packages scope.
+# See settings.gradle.kts for the repo declaration.
+wallet-core = "4.3.5"
+# D8 core library desugaring — backports java.time.* and other Java 8+ APIs
+# so libsignal-android (which targets minSdk 26 but relies on Instant etc.)
+# can run on the full minSdk = 26 surface through D8's synthesised stubs.
+desugar = "2.1.4"
 
 [libraries]
 # Compose
@@ -79,6 +92,16 @@ core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx
 # Credential Manager (1Password / Dashlane / Google Password Manager)
 credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 credentials-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
+
+# Signal Protocol — real Curve25519 identity keys, signed pre-keys, Double Ratchet + PQXDH sessions.
+libsignal-android = { group = "org.signal", name = "libsignal-android", version.ref = "libsignal" }
+
+# Trust Wallet wallet-core — BIP-39 mnemonic generation + multi-chain address derivation
+# (BTC, ETH, SOL, …) sharing the same HD seed. Bundles .so files for 4 ABIs.
+wallet-core = { group = "com.trustwallet", name = "wallet-core", version.ref = "wallet-core" }
+
+# Core library desugaring runtime — required by libsignal-android.
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 
 # Testing
 junit = { group = "junit", name = "junit", version = "4.13.2" }

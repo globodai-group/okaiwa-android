@@ -80,6 +80,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // libsignal-android ships bytecode that uses APIs only available
+        // on API 26+ (java.time.Instant, java.util.stream.*); core
+        // library desugaring backports them through D8 so the same APK
+        // runs on the minSdk = 26 surface without crashing on devices
+        // that ship older runtimes.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -162,6 +168,19 @@ dependencies {
     // (1Password, Dashlane, …) and falls back to Google Password Manager.
     implementation(libs.credentials)
     implementation(libs.credentials.auth)
+
+    // Signal Foundation libsignal — real Curve25519 identity keys, signed
+    // pre-keys, PQXDH + Double Ratchet session establishment. Replaces
+    // MockSignalKeyBundle. Bundled JNI + .so for arm64-v8a, armeabi-v7a, x86_64.
+    implementation(libs.libsignal.android)
+
+    // D8 desugaring runtime — paired with isCoreLibraryDesugaringEnabled.
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+
+    // Trust Wallet wallet-core — BIP-39 mnemonic generation (256-bit entropy /
+    // 24 words) and multi-chain HD derivation (BTC / ETH / SOL) from a single
+    // seed. Hosted on GitHub Packages — see settings.gradle.kts.
+    implementation(libs.wallet.core)
 
     // Testing
     testImplementation(libs.junit)
