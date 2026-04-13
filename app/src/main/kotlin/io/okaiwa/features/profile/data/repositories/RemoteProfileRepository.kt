@@ -6,6 +6,8 @@ import io.okaiwa.features.profile.domain.entities.UserProfile
 import io.okaiwa.features.profile.domain.repositories.ProfileRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +45,33 @@ class RemoteProfileRepository @Inject constructor(
     private val state = MutableStateFlow<UserProfile?>(null)
     private var hasFetchedOnce = false
 
+    /**
+     * Owned scope so we can cancel any in-flight `refresh()` the
+     * moment the user signs out. Without this, a PUT /profile or
+     * GET /profile/me started just before clear() would land its
+     * response into `state.value` AFTER the wipe — resurrecting the
+     * previous user's data on the next observer (cross-account leak,
+     * P1 flagged in the security review on the logout commit).
+     */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var refreshJob: Job? = null
+
+    init {
+        // Auto-clear the cache as soon as the SessionStore signals a
+        // sign-out. Same trigger covers both the kebab-menu Logout and
+        // any future "session expired" path that calls clear() —
+        // single source of truth for the cache lifecycle.
+        scope.launch {
+            sessionStore.sessionFlow.collect { session ->
+                if (session == null) {
+                    refreshJob?.cancel()
+                    state.value = null
+                    hasFetchedOnce = false
+                }
+            }
+        }
+    }
+
     override fun observeProfile(): Flow<UserProfile?> {
         // Lazy fetch — only the first subscription kicks the network
         // call. The Profile tab will call this on every selection but
@@ -50,7 +79,7 @@ class RemoteProfileRepository @Inject constructor(
         // reads come from the in-memory StateFlow.
         if (!hasFetchedOnce) {
             hasFetchedOnce = true
-            CoroutineScope(Dispatchers.IO).launch { refresh() }
+            refreshJob = scope.launch { refresh() }
         }
         return state.asStateFlow()
     }

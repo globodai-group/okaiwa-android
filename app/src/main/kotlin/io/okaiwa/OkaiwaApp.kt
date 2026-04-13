@@ -3,11 +3,15 @@ package io.okaiwa
 import android.app.Application
 import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
+import io.okaiwa.core.i18n.LocaleManager
 
 /**
  * Okaiwa application entry point.
  *
  * Responsibilities:
+ *   - Applies the user's persisted locale preference BEFORE the first
+ *     activity reads string resources, so the initial Compose tree
+ *     renders in the right language without a configuration bounce.
  *   - Bootstraps Hilt dependency injection.
  *   - Loads the Trust Wallet wallet-core JNI library on startup so any
  *     wallet UI opened during the session can instantiate [wallet.core
@@ -23,6 +27,10 @@ class OkaiwaApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Apply the saved locale first — if we wait until after Hilt,
+        // the initial Compose tree renders against the device locale
+        // and then flickers once the preference is read.
+        LocaleManager.applyPersistedLocale(this)
         loadWalletCore()
     }
 

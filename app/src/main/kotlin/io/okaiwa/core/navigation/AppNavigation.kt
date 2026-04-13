@@ -25,6 +25,7 @@ import io.okaiwa.features.auth.presentation.screens.SplashScreen
 import io.okaiwa.features.auth.presentation.screens.WelcomeScreen
 import io.okaiwa.features.auth.presentation.viewmodels.OtpVerificationViewModel
 import io.okaiwa.features.auth.presentation.viewmodels.PhoneEntryViewModel
+import io.okaiwa.features.profile.presentation.LanguagePickerScreen
 import io.okaiwa.features.profile.presentation.ProfileSetupScreen
 import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
@@ -74,6 +75,9 @@ sealed class Screen(val route: String) {
     data object ContactPicker : Screen("contacts")
     /** Wallet creation onboarding (method → tips → seed → verify → name → ready). */
     data object WalletCreate : Screen("wallet/create")
+
+    /** In-app Français / English switcher surfaced from the Profile tab. */
+    data object LanguagePicker : Screen("language_picker")
 }
 
 /**
@@ -262,7 +266,26 @@ fun AppNavigation(
 
                     MainTab.Settings -> SettingsScreen()
 
-                    MainTab.Profile -> ProfileScreen()
+                    MainTab.Profile -> ProfileScreen(
+                        onSignedOut = {
+                            // popUpTo(0) clears the ENTIRE back stack
+                            // before navigating to Welcome. The
+                            // alternative `popUpTo(Splash, inclusive)`
+                            // wouldn't match (Splash was already
+                            // dropped from the stack on the initial
+                            // splash → main transition) and would
+                            // leave Welcome stacked on top of Main —
+                            // letting the system back button return
+                            // to a wiped-session Profile screen.
+                            navController.navigate(Screen.Welcome.route) {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onOpenLanguagePicker = {
+                            navController.navigate(Screen.LanguagePicker.route)
+                        },
+                    )
                 }
             }
         }
@@ -311,6 +334,12 @@ fun AppNavigation(
             WalletOnboardingFlow(
                 onFinished = { navController.popBackStack() },
                 onCancel = { navController.popBackStack() },
+            )
+        }
+
+        composable(Screen.LanguagePicker.route) {
+            LanguagePickerScreen(
+                onBack = { navController.popBackStack() },
             )
         }
     }

@@ -42,6 +42,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.okaiwa.BuildConfig
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -121,7 +123,7 @@ fun OtpVerificationScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Retour",
+                        contentDescription = stringResource(R.string.common_back),
                         tint = OkaiwaColors.White,
                     )
                 }
@@ -136,7 +138,7 @@ fun OtpVerificationScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Code à 6 chiffres",
+                    text = stringResource(R.string.otp_title),
                     color = OkaiwaColors.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 22.sp,
@@ -144,7 +146,7 @@ fun OtpVerificationScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Nous venons d'envoyer un code par SMS au\n$phoneNumberDisplay",
+                    text = stringResource(R.string.otp_subtitle, phoneNumberDisplay),
                     color = OkaiwaColors.WhiteDim,
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
@@ -263,13 +265,13 @@ fun OtpVerificationScreen(
             ) {
                 if (secondsRemaining > 0) {
                     Text(
-                        text = "Renvoyer le code dans ${secondsRemaining}s",
+                        text = stringResource(R.string.otp_resend_in_seconds, secondsRemaining),
                         color = OkaiwaColors.Muted,
                         fontSize = 13.sp,
                     )
                 } else {
                     Text(
-                        text = "Renvoyer le code",
+                        text = stringResource(R.string.otp_resend_now),
                         color = OkaiwaColors.Lime,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -284,7 +286,7 @@ fun OtpVerificationScreen(
             if (BuildConfig.DEBUG) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "DEV — utilisez 000000 pour passer",
+                    text = stringResource(R.string.otp_dev_hint),
                     color = OkaiwaColors.Lime,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -320,7 +322,7 @@ fun OtpVerificationScreen(
                 )
             } else {
                 Text(
-                    text = "Continuer",
+                    text = stringResource(R.string.otp_submit),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp,
                 )

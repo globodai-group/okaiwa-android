@@ -30,11 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.features.auth.presentation.viewmodels.AuthStep
 import io.okaiwa.features.auth.presentation.viewmodels.AuthViewModel
 
@@ -90,7 +92,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Okaiwa",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -98,7 +100,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Secure messaging.\nYour keys. Your data.",
+                text = stringResource(R.string.login_tagline),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -153,8 +155,8 @@ private fun PhoneInputSection(
     OutlinedTextField(
         value = phoneNumber,
         onValueChange = onPhoneChanged,
-        label = { Text("Phone number") },
-        placeholder = { Text("+33 6 12 34 56 78") },
+        label = { Text(stringResource(R.string.login_phone_label)) },
+        placeholder = { Text(stringResource(R.string.login_phone_placeholder)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Phone,
@@ -181,7 +183,7 @@ private fun PhoneInputSection(
                 strokeWidth = 2.dp,
             )
         } else {
-            Text("Continue")
+            Text(stringResource(R.string.login_continue))
         }
     }
 }
@@ -196,7 +198,7 @@ private fun OtpVerificationSection(
     onBack: () -> Unit,
 ) {
     Text(
-        text = "Enter the 6-digit code",
+        text = stringResource(R.string.login_otp_enter_title),
         style = MaterialTheme.typography.titleMedium,
     )
 
@@ -205,7 +207,7 @@ private fun OtpVerificationSection(
     OutlinedTextField(
         value = otpCode,
         onValueChange = onOtpChanged,
-        label = { Text("Verification code") },
+        label = { Text(stringResource(R.string.login_otp_field_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.NumberPassword,
@@ -232,13 +234,13 @@ private fun OtpVerificationSection(
                 strokeWidth = 2.dp,
             )
         } else {
-            Text("Verify")
+            Text(stringResource(R.string.login_verify))
         }
     }
 
     Spacer(modifier = Modifier.height(12.dp))
 
     TextButton(onClick = onBack) {
-        Text("Change phone number")
+        Text(stringResource(R.string.login_change_phone))
     }
 }

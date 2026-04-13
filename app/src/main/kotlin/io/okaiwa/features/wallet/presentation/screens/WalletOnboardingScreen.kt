@@ -27,10 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.okaiwa.R
 import io.okaiwa.core.navigation.LocalFloatingBarPadding
 import io.okaiwa.core.theme.OkaiwaColors
 
@@ -67,7 +69,7 @@ fun WalletOnboardingScreen(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Wallet",
+            text = stringResource(R.string.wallet_onboarding_tab_title),
             color = OkaiwaColors.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
@@ -104,7 +106,7 @@ fun WalletOnboardingScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Votre wallet crypto",
+                    text = stringResource(R.string.wallet_onboarding_title),
                     color = OkaiwaColors.White,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -114,7 +116,7 @@ fun WalletOnboardingScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Envoyez et recevez des cryptos directement dans vos conversations. Vos clés restent sur votre appareil.",
+                    text = stringResource(R.string.wallet_onboarding_subtitle),
                     color = OkaiwaColors.WhiteDim,
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
@@ -145,7 +147,7 @@ fun WalletOnboardingScreen(
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                 ) {
                     Text(
-                        text = "Créer un wallet",
+                        text = stringResource(R.string.wallet_onboarding_create_button),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
                     )
@@ -165,7 +167,7 @@ fun WalletOnboardingScreen(
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                 ) {
                     Text(
-                        text = "Importer un wallet",
+                        text = stringResource(R.string.wallet_onboarding_import_button),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
                     )

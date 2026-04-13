@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -71,7 +72,7 @@ fun WelcomeScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "OKAIWA",
+                text = stringResource(R.string.app_wordmark),
                 color = OkaiwaColors.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
@@ -80,7 +81,7 @@ fun WelcomeScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Messagerie chiffrée.\nWallet intégré.",
+                text = stringResource(R.string.welcome_tagline),
                 color = OkaiwaColors.WhiteDim,
                 fontSize = 16.sp,
                 lineHeight = 22.sp,
@@ -110,7 +111,7 @@ fun WelcomeScreen(
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
             ) {
                 Text(
-                    text = "Créer un compte",
+                    text = stringResource(R.string.welcome_create_account_button),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp,
                 )
@@ -130,7 +131,7 @@ fun WelcomeScreen(
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
             ) {
                 Text(
-                    text = "Se connecter",
+                    text = stringResource(R.string.welcome_sign_in_button),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp,
                 )
@@ -139,7 +140,7 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "En continuant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.",
+                text = stringResource(R.string.welcome_terms),
                 color = OkaiwaColors.Muted,
                 fontSize = 12.sp,
                 lineHeight = 16.sp,

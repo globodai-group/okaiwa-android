@@ -44,8 +44,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.okaiwa.R
 import io.okaiwa.features.settings.domain.entities.SecurityScore
 
 /**
@@ -70,7 +72,7 @@ fun SettingsScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_top_bar_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
@@ -89,61 +91,61 @@ fun SettingsScreen() {
             SecurityScoreCard(securityScore = securityScore)
 
             // Account section
-            SettingsSection(title = "Account") {
+            SettingsSection(title = stringResource(R.string.settings_section_account)) {
                 SettingsItem(
                     icon = Icons.Default.Person,
-                    title = "Profile",
-                    subtitle = "Name, avatar, about",
+                    title = stringResource(R.string.settings_item_profile_title),
+                    subtitle = stringResource(R.string.settings_item_profile_subtitle),
                     onClick = { /* TODO */ },
                 )
                 SettingsItem(
                     icon = Icons.Default.AccountBalanceWallet,
-                    title = "Wallet",
-                    subtitle = "Manage crypto wallet and backup",
+                    title = stringResource(R.string.settings_item_wallet_title),
+                    subtitle = stringResource(R.string.settings_item_wallet_subtitle),
                     onClick = { /* TODO */ },
                 )
             }
 
             // Privacy section
-            SettingsSection(title = "Privacy & Security") {
+            SettingsSection(title = stringResource(R.string.settings_section_privacy)) {
                 SettingsItem(
                     icon = Icons.Default.Lock,
-                    title = "Privacy",
-                    subtitle = "Last seen, read receipts, blocked contacts",
+                    title = stringResource(R.string.settings_item_privacy_title),
+                    subtitle = stringResource(R.string.settings_item_privacy_subtitle),
                     onClick = { /* TODO */ },
                 )
                 SettingsItem(
                     icon = Icons.Default.Fingerprint,
-                    title = "Biometric lock",
-                    subtitle = "Require biometric to open Okaiwa",
+                    title = stringResource(R.string.settings_item_biometric_title),
+                    subtitle = stringResource(R.string.settings_item_biometric_subtitle),
                     onClick = { /* TODO */ },
                 )
                 SettingsItem(
                     icon = Icons.Default.Security,
-                    title = "Screen security",
-                    subtitle = "Prevent screenshots and screen recording",
+                    title = stringResource(R.string.settings_item_screen_security_title),
+                    subtitle = stringResource(R.string.settings_item_screen_security_subtitle),
                     onClick = { /* TODO */ },
                 )
             }
 
             // App section
-            SettingsSection(title = "App") {
+            SettingsSection(title = stringResource(R.string.settings_section_app)) {
                 SettingsItem(
                     icon = Icons.AutoMirrored.Filled.Chat,
-                    title = "Chats",
-                    subtitle = "Chat backup, media auto-download",
+                    title = stringResource(R.string.settings_item_chats_title),
+                    subtitle = stringResource(R.string.settings_item_chats_subtitle),
                     onClick = { /* TODO */ },
                 )
                 SettingsItem(
                     icon = Icons.Default.Notifications,
-                    title = "Notifications",
-                    subtitle = "Message and call notifications",
+                    title = stringResource(R.string.settings_item_notifications_title),
+                    subtitle = stringResource(R.string.settings_item_notifications_subtitle),
                     onClick = { /* TODO */ },
                 )
                 SettingsItem(
                     icon = Icons.Default.ColorLens,
-                    title = "Appearance",
-                    subtitle = "Theme, font size, language",
+                    title = stringResource(R.string.settings_item_appearance_title),
+                    subtitle = stringResource(R.string.settings_item_appearance_subtitle),
                     onClick = { /* TODO */ },
                 )
             }
@@ -152,11 +154,15 @@ fun SettingsScreen() {
             // Gradle from `git rev-list --count HEAD`, so this line
             // tracks the build shipped to the tester without anyone
             // having to hand-edit it.
-            SettingsSection(title = "À propos") {
+            SettingsSection(title = stringResource(R.string.settings_section_about)) {
                 SettingsItem(
                     icon = Icons.Default.Info,
-                    title = "À propos d'Okaiwa",
-                    subtitle = "Version ${io.okaiwa.BuildConfig.VERSION_NAME} (${io.okaiwa.BuildConfig.VERSION_CODE})",
+                    title = stringResource(R.string.settings_item_about_title),
+                    subtitle = stringResource(
+                        R.string.settings_item_about_subtitle,
+                        io.okaiwa.BuildConfig.VERSION_NAME,
+                        io.okaiwa.BuildConfig.VERSION_CODE,
+                    ),
                     onClick = { /* TODO */ },
                 )
             }
@@ -164,8 +170,8 @@ fun SettingsScreen() {
             // Danger zone
             SettingsItem(
                 icon = Icons.Default.Delete,
-                title = "Delete account",
-                subtitle = "Permanently delete your account and all data",
+                title = stringResource(R.string.settings_item_delete_account_title),
+                subtitle = stringResource(R.string.settings_item_delete_account_subtitle),
                 onClick = { /* TODO: confirmation dialog */ },
                 isDanger = true,
             )
@@ -201,7 +207,7 @@ private fun SecurityScoreCard(securityScore: SecurityScore) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Security score",
+                        text = stringResource(R.string.settings_security_score_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
@@ -230,7 +236,12 @@ private fun SecurityScoreCard(securityScore: SecurityScore) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "${securityScore.level.label} - ${securityScore.metCount}/${securityScore.totalCount} criteria met",
+                text = stringResource(
+                    R.string.settings_security_score_progress,
+                    securityScore.level.label,
+                    securityScore.metCount,
+                    securityScore.totalCount,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )

@@ -31,12 +31,25 @@ class ProfileSetupViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
 ) : ViewModel() {
 
+    /**
+     * Enum of surfaceable errors instead of raw strings — lets the UI
+     * layer resolve the user-facing copy via `stringResource(...)` so
+     * the French / English localisation files stay the single source
+     * of truth for wording.
+     */
+    enum class Error {
+        SessionExpired,
+        UsernameTaken,
+        Generic,
+        Offline,
+    }
+
     data class UiState(
         val username: String = "",
         val displayName: String = "",
         val bio: String = "",
         val isSubmitting: Boolean = false,
-        val error: String? = null,
+        val error: Error? = null,
         val done: Boolean = false,
     ) {
         val isUsernameValid: Boolean
@@ -59,7 +72,7 @@ class ProfileSetupViewModel @Inject constructor(
         val session = sessionStore.current()
         val accessToken = session?.accessToken
         if (session == null || accessToken.isNullOrEmpty()) {
-            _state.value = s.copy(error = "Session expirée — reconnectez-vous.")
+            _state.value = s.copy(error = Error.SessionExpired)
             return
         }
 
@@ -79,9 +92,9 @@ class ProfileSetupViewModel @Inject constructor(
                 .onSuccess { response ->
                     _state.value = when {
                         response.code() == 409 ->
-                            _state.value.copy(isSubmitting = false, error = "Ce nom d'utilisateur est déjà pris.")
+                            _state.value.copy(isSubmitting = false, error = Error.UsernameTaken)
                         response.code() == 401 ->
-                            _state.value.copy(isSubmitting = false, error = "Session expirée — reconnectez-vous.")
+                            _state.value.copy(isSubmitting = false, error = Error.SessionExpired)
                         response.isSuccessful -> {
                             sessionStore.markProfileSetupDone()
                             // Hot-cache the canonical server state so
@@ -93,7 +106,7 @@ class ProfileSetupViewModel @Inject constructor(
                         }
                         else ->
                             // Generic copy — never surface raw server body to the user.
-                            _state.value.copy(isSubmitting = false, error = "Une erreur est survenue, réessayez.")
+                            _state.value.copy(isSubmitting = false, error = Error.Generic)
                     }
                 }
                 .onFailure { _ ->
@@ -102,7 +115,7 @@ class ProfileSetupViewModel @Inject constructor(
                     // and stack traces that have no place in a UI toast.
                     _state.value = _state.value.copy(
                         isSubmitting = false,
-                        error = "Connexion impossible. Vérifiez votre réseau."
+                        error = Error.Offline,
                     )
                 }
         }

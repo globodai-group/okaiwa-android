@@ -21,15 +21,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,10 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.navigation.LocalFloatingBarPadding
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.profile.domain.entities.UserProfile
@@ -71,13 +79,28 @@ fun ProfileScreen(
     onEditProfile: () -> Unit = {},
     onPickAvatar: () -> Unit = {},
     onAddPublication: () -> Unit = {},
+    onSignedOut: () -> Unit = {},
+    onOpenLanguagePicker: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val floatingBarInset = LocalFloatingBarPadding.current.calculateBottomPadding()
     var selectedTab by remember { mutableStateOf(PublicationTab.Active) }
+    var showMoreMenu by remember { mutableStateOf(false) }
 
     val profile = uiState.profile
+
+    // Once signOut() flips the flag in the ViewModel, the navigation
+    // layer pops back to Welcome. We immediately ack via
+    // onSignOutNavigated() so the LaunchedEffect won't re-fire on
+    // recomposition / back-navigation to a stale ProfileScreen — the
+    // navigate call would otherwise stack a second Welcome route.
+    LaunchedEffect(uiState.signedOut) {
+        if (uiState.signedOut) {
+            onSignedOut()
+            viewModel.onSignOutNavigated()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -87,7 +110,13 @@ fun ProfileScreen(
     ) {
         TopBar(
             onQrClick = onOpenQrCode,
-            onMoreClick = { /* TODO: action sheet (logout, delete account) */ },
+            onMoreClick = { showMoreMenu = true },
+            isMoreMenuOpen = showMoreMenu,
+            onMoreMenuDismiss = { showMoreMenu = false },
+            onSignOut = {
+                showMoreMenu = false
+                viewModel.signOut()
+            },
         )
 
         if (profile == null) {
@@ -106,6 +135,7 @@ fun ProfileScreen(
                     onPickAvatar = onPickAvatar,
                     onEditProfile = onEditProfile,
                     onOpenSettings = onOpenSettings,
+                    onOpenLanguagePicker = onOpenLanguagePicker,
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 IdentityCard(profile = profile)
@@ -123,7 +153,13 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun TopBar(onQrClick: () -> Unit, onMoreClick: () -> Unit) {
+private fun TopBar(
+    onQrClick: () -> Unit,
+    onMoreClick: () -> Unit,
+    isMoreMenuOpen: Boolean,
+    onMoreMenuDismiss: () -> Unit,
+    onSignOut: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -131,11 +167,39 @@ private fun TopBar(onQrClick: () -> Unit, onMoreClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onQrClick) {
-            Icon(Icons.Default.QrCode, contentDescription = "QR code", tint = OkaiwaColors.White)
+            Icon(Icons.Default.QrCode, contentDescription = stringResource(R.string.profile_top_bar_qr_cd), tint = OkaiwaColors.White)
         }
         Spacer(modifier = Modifier.weight(1f))
-        IconButton(onClick = onMoreClick) {
-            Icon(Icons.Default.MoreHoriz, contentDescription = "Plus", tint = OkaiwaColors.White)
+        Box {
+            IconButton(onClick = onMoreClick) {
+                Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(R.string.profile_top_bar_more_cd), tint = OkaiwaColors.White)
+            }
+            DropdownMenu(
+                expanded = isMoreMenuOpen,
+                onDismissRequest = onMoreMenuDismiss,
+                // Anchor the dropdown to the kebab IconButton — the
+                // default M3 placement nudges it to the start of the
+                // anchor on phones, which keeps it under the icon
+                // instead of bleeding off the right edge of the screen.
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(R.string.profile_more_menu_logout),
+                            color = OkaiwaColors.White,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = null,
+                            tint = OkaiwaColors.White,
+                        )
+                    },
+                    onClick = onSignOut,
+                )
+            }
         }
     }
 }
@@ -176,7 +240,7 @@ private fun AvatarBlock(profile: UserProfile, onPickAvatar: () -> Unit) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Icon(
                     imageVector = Icons.Default.Star,
-                    contentDescription = "Compte vérifié Pro",
+                    contentDescription = stringResource(R.string.profile_verified_cd),
                     tint = OkaiwaColors.Lime,
                     modifier = Modifier.size(20.dp),
                 )
@@ -186,7 +250,10 @@ private fun AvatarBlock(profile: UserProfile, onPickAvatar: () -> Unit) {
         Spacer(modifier = Modifier.height(2.dp))
 
         Text(
-            text = if (profile.isOnline) "en ligne" else "hors ligne",
+            text = stringResource(
+                if (profile.isOnline) R.string.profile_presence_online
+                else R.string.profile_presence_offline,
+            ),
             color = if (profile.isOnline) OkaiwaColors.Lime else OkaiwaColors.Muted,
             fontSize = 13.sp,
         )
@@ -198,6 +265,7 @@ private fun QuickActions(
     onPickAvatar: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenLanguagePicker: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -208,20 +276,29 @@ private fun QuickActions(
         QuickActionTile(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.CameraAlt,
-            label = "Photo",
+            label = stringResource(R.string.profile_quick_action_photo),
             onClick = onPickAvatar,
         )
         QuickActionTile(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Edit,
-            label = "Modifier",
+            label = stringResource(R.string.profile_quick_action_edit),
             onClick = onEditProfile,
         )
         QuickActionTile(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Settings,
-            label = "Paramètres",
+            label = stringResource(R.string.profile_quick_action_settings),
             onClick = onOpenSettings,
+        )
+        // Language picker — surfaced here rather than buried in Settings
+        // (which is itself a placeholder for now) so the French/English
+        // switch is discoverable as soon as the profile tab opens.
+        QuickActionTile(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.Language,
+            label = stringResource(R.string.profile_language_row_label),
+            onClick = onOpenLanguagePicker,
         )
     }
 }
@@ -261,14 +338,14 @@ private fun IdentityCard(profile: UserProfile) {
             .clip(RoundedCornerShape(14.dp))
             .background(OkaiwaColors.BlackElevated),
     ) {
-        InfoRow(label = "Mobile", value = profile.phoneNumberE164)
+        InfoRow(label = stringResource(R.string.profile_info_mobile), value = profile.phoneNumberE164)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(0.5.dp)
                 .background(OkaiwaColors.BlackBorder),
         )
-        InfoRow(label = "Nom d'utilisateur", value = profile.username)
+        InfoRow(label = stringResource(R.string.profile_info_username), value = profile.username)
         if (!profile.bio.isNullOrBlank()) {
             Box(
                 modifier = Modifier
@@ -276,7 +353,7 @@ private fun IdentityCard(profile: UserProfile) {
                     .height(0.5.dp)
                     .background(OkaiwaColors.BlackBorder),
             )
-            InfoRow(label = "Bio", value = profile.bio)
+            InfoRow(label = stringResource(R.string.profile_info_bio), value = profile.bio)
         }
     }
 }
@@ -301,12 +378,12 @@ private fun PublicationTabs(selected: PublicationTab, onSelected: (PublicationTa
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TabPill(
-            text = "Publications",
+            text = stringResource(R.string.profile_publications_active_tab),
             isSelected = selected == PublicationTab.Active,
             onClick = { onSelected(PublicationTab.Active) },
         )
         TabPill(
-            text = "Publications archivées",
+            text = stringResource(R.string.profile_publications_archived_tab),
             isSelected = selected == PublicationTab.Archived,
             onClick = { onSelected(PublicationTab.Archived) },
         )
@@ -338,14 +415,14 @@ private fun EmptyPublications(onAdd: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Aucune publication...",
+            text = stringResource(R.string.profile_publications_empty_title),
             color = OkaiwaColors.White,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Publiez des photos et vidéos à afficher sur votre page de profil.",
+            text = stringResource(R.string.profile_publications_empty_subtitle),
             color = OkaiwaColors.Muted,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 32.dp),
@@ -368,7 +445,7 @@ private fun EmptyPublications(onAdd: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Ajouter une publication",
+                text = stringResource(R.string.profile_publications_add_button),
                 color = OkaiwaColors.Black,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,

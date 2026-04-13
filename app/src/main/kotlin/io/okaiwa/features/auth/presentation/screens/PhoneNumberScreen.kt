@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.auth.domain.entities.Countries
 import io.okaiwa.features.auth.domain.entities.Country
@@ -112,7 +114,7 @@ fun PhoneNumberScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Retour",
+                        contentDescription = stringResource(R.string.common_back),
                         tint = OkaiwaColors.White,
                     )
                 }
@@ -129,8 +131,8 @@ fun PhoneNumberScreen(
             ) {
                 Text(
                     text = when (mode) {
-                        PhoneEntryMode.Register -> "Votre numéro de téléphone"
-                        PhoneEntryMode.Login -> "Connexion"
+                        PhoneEntryMode.Register -> stringResource(R.string.phone_entry_title_register)
+                        PhoneEntryMode.Login -> stringResource(R.string.phone_entry_title_login)
                     },
                     color = OkaiwaColors.White,
                     fontWeight = FontWeight.SemiBold,
@@ -139,7 +141,7 @@ fun PhoneNumberScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Confirmez votre indicatif national\net entrez votre numéro de téléphone.",
+                    text = stringResource(R.string.phone_entry_subtitle),
                     color = OkaiwaColors.WhiteDim,
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
@@ -209,14 +211,14 @@ fun PhoneNumberScreen(
                             .padding(16.dp),
                     ) {
                         Text(
-                            text = "Aucun compte Okaiwa avec ce numéro.",
+                            text = stringResource(R.string.phone_entry_login_account_not_found_title),
                             color = OkaiwaColors.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Vous n'êtes pas encore inscrit. Vous pouvez créer un compte avec ce numéro en un seul geste.",
+                            text = stringResource(R.string.phone_entry_login_account_not_found_body),
                             color = OkaiwaColors.WhiteDim,
                             fontSize = 13.sp,
                             lineHeight = 18.sp,
@@ -232,7 +234,7 @@ fun PhoneNumberScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = "Créer un compte avec ce numéro",
+                                text = stringResource(R.string.phone_entry_login_create_account_cta),
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
                             )
@@ -267,7 +269,7 @@ fun PhoneNumberScreen(
             } else {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Continuer",
+                    contentDescription = stringResource(R.string.phone_entry_continue_cd),
                 )
             }
         }
@@ -298,12 +300,12 @@ private fun CountryField(country: Country, onClick: () -> Unit) {
         Spacer(modifier = Modifier.size(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Pays",
+                text = stringResource(R.string.phone_entry_country_label),
                 color = OkaiwaColors.Muted,
                 fontSize = 11.sp,
             )
             Text(
-                text = country.name,
+                text = country.localizedName,
                 color = OkaiwaColors.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
@@ -339,7 +341,7 @@ private fun PhoneField(
             .height(64.dp),
         label = {
             Text(
-                text = "Numéro de téléphone",
+                text = stringResource(R.string.phone_entry_phone_field_label),
                 color = OkaiwaColors.Lime,
                 fontSize = 12.sp,
             )
@@ -397,7 +399,7 @@ private fun SyncContactsToggle(checked: Boolean, onCheckedChange: (Boolean) -> U
         )
         Spacer(modifier = Modifier.size(8.dp))
         Text(
-            text = "Synchroniser les contacts",
+            text = stringResource(R.string.phone_entry_sync_contacts_label),
             color = OkaiwaColors.White,
             fontSize = 15.sp,
         )

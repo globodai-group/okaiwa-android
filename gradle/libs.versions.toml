@@ -20,6 +20,10 @@ firebase-bom = "33.7.0"
 sqlcipher = "4.14.1"
 activity-compose = "1.13.0"
 core-ktx = "1.18.0"
+# AppCompat — only pulled in for AppCompatDelegate.setApplicationLocales,
+# which is the pre-T compatibility shim behind the in-app language picker
+# (Android 13+ routes through the framework's LocaleManager on its own).
+appcompat = "1.7.0"
 google-services = "4.4.4"
 credentials = "1.6.0"
 # Signal Foundation libsignal — Signal Protocol (Curve25519 + Double Ratchet + PQXDH).
@@ -91,6 +95,11 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 
 # AndroidX Core
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+
+# AppCompat — exposes AppCompatDelegate.setApplicationLocales() so the
+# in-app language picker can flip the locale on Android 12 and earlier
+# without a full activity restart (Android 13+ uses framework APIs).
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 # Credential Manager (1Password / Dashlane / Google Password Manager)
 credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }

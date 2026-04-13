@@ -3,11 +3,16 @@
     <!--
         Base theme for the Okaiwa Android application.
 
-        ComponentActivity hosts Compose content, so this framework theme
+        AppCompatActivity hosts Compose content, so this framework theme
         only sets the window chrome. Material 3 colors and typography
         are applied via OkaiwaTheme composable inside setContent { }.
+
+        Parent switched from android:Theme.Material.Light.NoActionBar to
+        Theme.AppCompat.Light.NoActionBar so AppCompatDelegate can attach
+        its locale shim to the activity window — necessary for the in-app
+        Français / English switcher on Android 12 and earlier.
     -->
-    <style name="Theme.Okaiwa" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.Okaiwa" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@color/ic_launcher_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

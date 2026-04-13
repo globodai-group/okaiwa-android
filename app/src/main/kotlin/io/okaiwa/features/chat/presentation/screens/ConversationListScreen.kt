@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.navigation.LocalFloatingBarPadding
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.chat.domain.entities.Conversation
@@ -196,7 +198,7 @@ fun ConversationListScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Chat,
-                contentDescription = "Nouvelle conversation",
+                contentDescription = stringResource(R.string.conversation_list_new_conversation_cd),
             )
         }
     }
@@ -220,7 +222,7 @@ private fun SearchBar(
         IconButton(onClick = onClose) {
             Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = "Fermer la recherche",
+                contentDescription = stringResource(R.string.conversation_list_search_close_cd),
                 tint = OkaiwaColors.White,
             )
         }
@@ -231,7 +233,7 @@ private fun SearchBar(
                 .weight(1f)
                 .padding(end = 8.dp)
                 .focusRequester(focusRequester),
-            placeholder = { Text("Rechercher des conversations", color = OkaiwaColors.Placeholder) },
+            placeholder = { Text(stringResource(R.string.conversation_list_search_placeholder), color = OkaiwaColors.Placeholder) },
             leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OkaiwaColors.Muted) },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
@@ -260,7 +262,7 @@ private fun ConversationListTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Okaiwa",
+            text = stringResource(R.string.conversation_list_title),
             color = OkaiwaColors.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.SemiBold,
@@ -271,14 +273,14 @@ private fun ConversationListTopBar(
         IconButton(onClick = onSearchClick) {
             Icon(
                 imageVector = Icons.Outlined.Search,
-                contentDescription = "Rechercher",
+                contentDescription = stringResource(R.string.conversation_list_search_cd),
                 tint = OkaiwaColors.White,
             )
         }
         IconButton(onClick = onContactsClick) {
             Icon(
                 imageVector = Icons.Outlined.People,
-                contentDescription = "Contacts",
+                contentDescription = stringResource(R.string.conversation_list_contacts_cd),
                 tint = OkaiwaColors.White,
             )
         }
@@ -390,14 +392,14 @@ private fun EmptyConversationsView(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Aucune conversation",
+            text = stringResource(R.string.conversation_list_empty_title),
             color = OkaiwaColors.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Commencez une conversation chiffrée avec un contact.",
+            text = stringResource(R.string.conversation_list_empty_subtitle),
             color = OkaiwaColors.Muted,
             fontSize = 14.sp,
         )

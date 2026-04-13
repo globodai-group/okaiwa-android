@@ -37,11 +37,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.auth.domain.entities.Countries
 import io.okaiwa.features.auth.domain.entities.Country
@@ -64,7 +66,12 @@ fun CountryPickerScreen(
         } else {
             val lower = query.trim().lowercase()
             Countries.all.filter { country ->
-                country.name.lowercase().contains(lower) ||
+                // Match against the LOCALIZED name so an EN-locale user
+                // searching "Germany" finds it (the hardcoded FR `name`
+                // is "Allemagne"). Keep the FR fallback for users still
+                // typing the French spelling.
+                country.localizedName.lowercase().contains(lower) ||
+                    country.name.lowercase().contains(lower) ||
                     country.dialCode.contains(lower) ||
                     country.isoCode.lowercase().contains(lower)
             }
@@ -89,12 +96,12 @@ fun CountryPickerScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Retour",
+                        contentDescription = stringResource(R.string.common_back),
                         tint = OkaiwaColors.White,
                     )
                 }
                 Text(
-                    text = "Choisir un pays",
+                    text = stringResource(R.string.country_picker_title),
                     color = OkaiwaColors.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -111,7 +118,7 @@ fun CountryPickerScreen(
                     .height(52.dp),
                 placeholder = {
                     Text(
-                        text = "Rechercher un pays",
+                        text = stringResource(R.string.country_picker_search_placeholder),
                         color = OkaiwaColors.Placeholder,
                         fontSize = 15.sp,
                     )
@@ -128,7 +135,7 @@ fun CountryPickerScreen(
                         IconButton(onClick = { query = "" }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Effacer",
+                                contentDescription = stringResource(R.string.common_clear),
                                 tint = OkaiwaColors.Muted,
                             )
                         }
@@ -184,7 +191,7 @@ private fun CountryRow(country: Country, onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.size(16.dp))
         Text(
-            text = country.name,
+            text = country.localizedName,
             color = OkaiwaColors.White,
             fontSize = 16.sp,
             modifier = Modifier.weight(1f),

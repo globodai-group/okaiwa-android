@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -76,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CreatePasswordRequest
 import androidx.credentials.CredentialManager
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import kotlinx.coroutines.launch
 
@@ -145,7 +147,7 @@ fun WalletOnboardingFlow(
             )
 
             WalletOnboardingStep.Ready -> ReadyStep(
-                walletName = uiState.walletName.ifBlank { "Mon portefeuille" },
+                walletName = uiState.walletName.ifBlank { stringResource(R.string.wallet_create_default_name) },
                 onDismiss = onFinished,
                 onFundWallet = onFinished,
             )
@@ -164,21 +166,21 @@ private fun MethodStep(
     onCancel: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "Créer un nouveau portefeuille", onBack = onCancel)
+        TopBar(title = stringResource(R.string.wallet_create_step_method_title), onBack = onCancel)
 
         Spacer(modifier = Modifier.height(8.dp))
 
         MethodCard(
             icon = Icons.Default.LockReset,
-            title = "Phrase secrète",
-            subtitle = "Afficher les détails",
-            badge = "Recommandé",
+            title = stringResource(R.string.wallet_create_method_seed_title),
+            subtitle = stringResource(R.string.wallet_create_method_seed_subtitle),
+            badge = stringResource(R.string.wallet_create_method_seed_badge),
             bodyLines = listOf(
-                "24 mots BIP-39 générés sur votre appareil. La seule façon de récupérer vos fonds si vous perdez le téléphone.",
-                "Sécurité : 256 bits d'entropie — la même norme que Ledger, Trezor, Signal.",
-                "Peut être sauvegardée dans 1Password, Dashlane ou votre trousseau natif.",
+                stringResource(R.string.wallet_create_method_seed_body_1),
+                stringResource(R.string.wallet_create_method_seed_body_2),
+                stringResource(R.string.wallet_create_method_seed_body_3),
             ),
-            ctaLabel = "Créer",
+            ctaLabel = stringResource(R.string.wallet_create_method_cta),
             onClick = onPickSeedPhrase,
             isPrimary = true,
         )
@@ -187,15 +189,15 @@ private fun MethodStep(
 
         MethodCard(
             icon = Icons.Default.Fingerprint,
-            title = "Clé d'accès",
-            subtitle = "Masquer les détails",
-            badge = "Beta",
+            title = stringResource(R.string.wallet_create_method_passkey_title),
+            subtitle = stringResource(R.string.wallet_create_method_passkey_subtitle),
+            badge = stringResource(R.string.wallet_create_method_passkey_badge),
             bodyLines = listOf(
-                "Créez ou récupérez un portefeuille avec une empreinte digitale. Cela se fait automatiquement grâce à la clé d'accès de votre appareil.",
-                "Transaction : huit chaînes disponibles sur ce portefeuille sans étapes supplémentaires.",
-                "Frais : pour les transactions courantes, comptez moins de 200 tokens de frais moyens.",
+                stringResource(R.string.wallet_create_method_passkey_body_1),
+                stringResource(R.string.wallet_create_method_passkey_body_2),
+                stringResource(R.string.wallet_create_method_passkey_body_3),
             ),
-            ctaLabel = "Créer",
+            ctaLabel = stringResource(R.string.wallet_create_method_cta),
             onClick = onPickPasskey,
             isPrimary = false,
         )
@@ -309,26 +311,26 @@ private fun SecurityTipsStep(
     onBack: () -> Unit,
 ) {
     // Copy differs per method so the user sees the security trade-offs
-    // of the path they actually chose.
-    val tips = remember(method) {
-        when (method) {
-            WalletCreationMethod.SeedPhrase -> listOf(
-                "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.",
-                "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager avec qui que ce soit.",
-                "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. Aucun support, aucun backup serveur : la sécurité dépend entièrement de moi.",
-            )
-            WalletCreationMethod.Passkey -> listOf(
-                "La clé privée est générée dans la StrongBox de mon téléphone. Elle ne quitte jamais l'appareil en clair et ne sera accessible qu'avec mon empreinte ou Face ID.",
-                "La sauvegarde chiffrée est synchronisée via Google Password Manager (Android) ou iCloud Keychain (iOS). Je peux donc récupérer mon wallet sur un nouveau téléphone en m'authentifiant.",
-                "Si je supprime la clé d'accès ET que je perds l'accès à mon compte Google/Apple, je perdrai mes fonds. Okaiwa n'a aucun backup de secours.",
-            )
-        }
+    // of the path they actually chose. Keeping the string list resolution
+    // inside the composable (not a remember) so locale changes through
+    // the in-app language picker re-pull the translated copy on recompose.
+    val tips: List<String> = when (method) {
+        WalletCreationMethod.SeedPhrase -> listOf(
+            stringResource(R.string.wallet_create_tips_seed_1),
+            stringResource(R.string.wallet_create_tips_seed_2),
+            stringResource(R.string.wallet_create_tips_seed_3),
+        )
+        WalletCreationMethod.Passkey -> listOf(
+            stringResource(R.string.wallet_create_tips_passkey_1),
+            stringResource(R.string.wallet_create_tips_passkey_2),
+            stringResource(R.string.wallet_create_tips_passkey_3),
+        )
     }
     val checked = remember { mutableStateListOf(false, false, false) }
     val allChecked = checked.all { it }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "Conseils de sécurité", onBack = onBack)
+        TopBar(title = stringResource(R.string.wallet_create_tips_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -359,7 +361,7 @@ private fun SecurityTipsStep(
             }
 
             Text(
-                text = "Votre phrase secrète est la clé de votre portefeuille",
+                text = stringResource(R.string.wallet_create_tips_header_title),
                 color = OkaiwaColors.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -368,7 +370,7 @@ private fun SecurityTipsStep(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Cochez toutes les cases pour confirmer que vous comprenez l'importance de la phrase secrète.",
+                text = stringResource(R.string.wallet_create_tips_header_subtitle),
                 color = OkaiwaColors.Muted,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
@@ -388,7 +390,7 @@ private fun SecurityTipsStep(
         }
 
         PrimaryButton(
-            label = "Continuer",
+            label = stringResource(R.string.common_continue),
             enabled = allChecked,
             onClick = onAccept,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -457,7 +459,7 @@ private fun SeedPhraseDisplayStep(
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "Votre phrase secrète", onBack = onBack)
+        TopBar(title = stringResource(R.string.wallet_create_seed_display_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -466,7 +468,7 @@ private fun SeedPhraseDisplayStep(
                 .padding(horizontal = 24.dp),
         ) {
             WarningBanner(
-                text = "Notez ces 24 mots dans l'ordre et gardez-les hors ligne. Personne — y compris Okaiwa — ne peut les récupérer à votre place.",
+                text = stringResource(R.string.wallet_create_seed_display_warning),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -491,9 +493,14 @@ private fun SeedPhraseDisplayStep(
             // Omnichannel save — Credential Manager picks the user's
             // preferred provider (1Password, Dashlane, Google Password
             // Manager, or the system keystore).
+            val saveLabel = stringResource(
+                if (savedToPasswordManager) R.string.wallet_create_seed_display_saved
+                else R.string.wallet_create_seed_display_save_manager,
+            )
+            val noManagerMessage = stringResource(R.string.wallet_create_seed_display_no_manager_toast)
             SecondaryAction(
                 icon = Icons.Default.Key,
-                label = if (savedToPasswordManager) "Sauvegardée ✓" else "Enregistrer dans un gestionnaire",
+                label = saveLabel,
                 onClick = {
                     scope.launch {
                         runCatching {
@@ -510,7 +517,7 @@ private fun SeedPhraseDisplayStep(
                         }.onFailure {
                             Toast.makeText(
                                 context,
-                                "Aucun gestionnaire disponible — copiez la phrase à la main.",
+                                noManagerMessage,
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
@@ -520,18 +527,19 @@ private fun SeedPhraseDisplayStep(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val copiedMessage = stringResource(R.string.wallet_create_seed_display_copied_toast)
             SecondaryAction(
                 icon = Icons.Outlined.ContentCopy,
-                label = "Copier dans le presse-papiers",
+                label = stringResource(R.string.wallet_create_seed_display_copy),
                 onClick = {
                     clipboard.setText(AnnotatedString(mnemonic.joinToString(" ")))
-                    Toast.makeText(context, "Phrase copiée (effacez-la après sauvegarde)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
                 },
             )
         }
 
         PrimaryButton(
-            label = "J'ai sauvegardé ma phrase",
+            label = stringResource(R.string.wallet_create_seed_display_continue),
             enabled = true,
             onClick = onContinue,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -624,7 +632,7 @@ private fun SeedPhraseVerifyStep(
     val allCorrect = challenges.indices.all { answers[it] == challenges[it].correctWord }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "Vérifier la phrase", onBack = onBack)
+        TopBar(title = stringResource(R.string.wallet_create_seed_verify_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -634,7 +642,7 @@ private fun SeedPhraseVerifyStep(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Sélectionnez les mots correspondants pour confirmer que vous avez sauvegardé votre phrase secrète.",
+                text = stringResource(R.string.wallet_create_seed_verify_subtitle),
                 color = OkaiwaColors.Muted,
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
@@ -643,7 +651,7 @@ private fun SeedPhraseVerifyStep(
 
             challenges.forEachIndexed { challengeIdx, challenge ->
                 Text(
-                    text = "Mot #${challenge.position}",
+                    text = stringResource(R.string.wallet_create_seed_verify_word_header, challenge.position),
                     color = OkaiwaColors.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -695,7 +703,7 @@ private fun SeedPhraseVerifyStep(
         }
 
         PrimaryButton(
-            label = "Continuer",
+            label = stringResource(R.string.wallet_create_seed_verify_continue),
             enabled = allCorrect,
             onClick = onSuccess,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -722,7 +730,7 @@ private fun PasskeyCreationStep(onCreated: () -> Unit, onBack: () -> Unit) {
     var isCreating by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "Clé d'accès", onBack = onBack)
+        TopBar(title = stringResource(R.string.wallet_create_passkey_step_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -752,7 +760,7 @@ private fun PasskeyCreationStep(onCreated: () -> Unit, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Créez votre clé d'accès",
+                text = stringResource(R.string.wallet_create_passkey_heading),
                 color = OkaiwaColors.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
@@ -760,7 +768,7 @@ private fun PasskeyCreationStep(onCreated: () -> Unit, onBack: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Votre téléphone va vous demander de confirmer avec votre empreinte ou Face ID. La clé privée reste dans la StrongBox — Okaiwa ne la voit jamais.",
+                text = stringResource(R.string.wallet_create_passkey_body),
                 color = OkaiwaColors.Muted,
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
@@ -771,13 +779,25 @@ private fun PasskeyCreationStep(onCreated: () -> Unit, onBack: () -> Unit) {
 
             // Benefit list — complement to the security tips already
             // accepted on the previous step.
-            PasskeyBenefitRow("Génération matérielle", "Clé signée par la StrongBox, non exportable.")
-            PasskeyBenefitRow("Sauvegarde cloud chiffrée", "Sync Google Password Manager / iCloud Keychain pour la récupération multi-appareil.")
-            PasskeyBenefitRow("Pas de phrase à retenir", "Biométrie suffit — aucun mot de passe ni mnémonique à noter.")
+            PasskeyBenefitRow(
+                title = stringResource(R.string.wallet_create_passkey_benefit_hardware_title),
+                subtitle = stringResource(R.string.wallet_create_passkey_benefit_hardware_body),
+            )
+            PasskeyBenefitRow(
+                title = stringResource(R.string.wallet_create_passkey_benefit_backup_title),
+                subtitle = stringResource(R.string.wallet_create_passkey_benefit_backup_body),
+            )
+            PasskeyBenefitRow(
+                title = stringResource(R.string.wallet_create_passkey_benefit_nophrase_title),
+                subtitle = stringResource(R.string.wallet_create_passkey_benefit_nophrase_body),
+            )
         }
 
         PrimaryButton(
-            label = if (isCreating) "Création…" else "Créer avec biométrie",
+            label = stringResource(
+                if (isCreating) R.string.wallet_create_passkey_cta_creating
+                else R.string.wallet_create_passkey_cta_idle,
+            ),
             enabled = !isCreating,
             onClick = {
                 isCreating = true
@@ -842,7 +862,7 @@ private fun NameWalletStep(
     val isValid = name.length in 4..24
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "Définir le nom du portefeuille", onBack = onBack)
+        TopBar(title = stringResource(R.string.wallet_create_name_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -851,7 +871,7 @@ private fun NameWalletStep(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Nom du portefeuille",
+                text = stringResource(R.string.wallet_create_name_field_label),
                 color = OkaiwaColors.Muted,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -861,7 +881,7 @@ private fun NameWalletStep(
                 value = name,
                 onValueChange = { if (it.length <= 24) onNameChanged(it) },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Mon portefeuille principal", color = OkaiwaColors.Placeholder) },
+                placeholder = { Text(stringResource(R.string.wallet_create_name_placeholder), color = OkaiwaColors.Placeholder) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 textStyle = TextStyle(color = OkaiwaColors.White, fontSize = 15.sp),
@@ -876,14 +896,14 @@ private fun NameWalletStep(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Entre 4 et 24 caractères.",
+                text = stringResource(R.string.wallet_create_name_helper),
                 color = OkaiwaColors.Muted,
                 fontSize = 12.sp,
             )
         }
 
         PrimaryButton(
-            label = "Terminé",
+            label = stringResource(R.string.wallet_create_name_submit),
             enabled = isValid,
             onClick = onConfirm,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -916,7 +936,7 @@ private fun ReadyStep(
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "Ignorer",
+                    text = stringResource(R.string.wallet_create_ready_dismiss),
                     color = OkaiwaColors.White,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
@@ -948,7 +968,7 @@ private fun ReadyStep(
             }
             Spacer(modifier = Modifier.height(20.dp))
             Text(
-                text = "Parfait !\n$walletName est prêt.",
+                text = stringResource(R.string.wallet_create_ready_title, walletName),
                 color = OkaiwaColors.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
@@ -957,7 +977,7 @@ private fun ReadyStep(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Ajoutez des fonds pour commencer à envoyer et recevoir.",
+                text = stringResource(R.string.wallet_create_ready_subtitle),
                 color = OkaiwaColors.Muted,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
@@ -970,13 +990,13 @@ private fun ReadyStep(
                 .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             PrimaryButton(
-                label = "Alimentez votre portefeuille",
+                label = stringResource(R.string.wallet_create_ready_fund_cta),
                 enabled = true,
                 onClick = onFundWallet,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Dépôt depuis Binance, Coinbase, ou tout wallet externe.",
+                text = stringResource(R.string.wallet_create_ready_fund_subtitle),
                 color = OkaiwaColors.Muted,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
@@ -1001,7 +1021,7 @@ private fun TopBar(title: String, onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Retour",
+                contentDescription = stringResource(R.string.common_back),
                 tint = OkaiwaColors.White,
             )
         }

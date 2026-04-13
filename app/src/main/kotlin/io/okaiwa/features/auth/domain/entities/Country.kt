@@ -1,5 +1,7 @@
 package io.okaiwa.features.auth.domain.entities
 
+import java.util.Locale
+
 /**
  * Phone country metadata — ISO code, display name, dial code, flag emoji.
  *
@@ -9,9 +11,32 @@ package io.okaiwa.features.auth.domain.entities
  */
 data class Country(
     val isoCode: String,
+    /**
+     * Fallback display name in French. Used when the device locale's
+     * CLDR data doesn't recognize the ISO code (rare). Prefer
+     * [localizedName] in the UI so the picker speaks the user's
+     * language regardless of locale.
+     */
     val name: String,
     val dialCode: String,
 ) {
+    /**
+     * Display name in the user's CURRENT locale, derived from the JVM /
+     * Android CLDR data via [Locale.getDisplayCountry]. Returns
+     * "United States" on EN, "États-Unis" on FR, "美国" on ZH, etc.
+     * Falls back to the hardcoded French [name] only for ISO codes
+     * Locale doesn't recognize.
+     */
+    val localizedName: String
+        get() {
+            val displayed = Locale("", isoCode).getDisplayCountry(Locale.getDefault())
+            return if (displayed.isNullOrBlank() || displayed.equals(isoCode, ignoreCase = true)) {
+                name
+            } else {
+                displayed
+            }
+        }
+
     val flagEmoji: String
         get() = isoCode.uppercase().map { char ->
             // Regional Indicator Symbols live at U+1F1E6..U+1F1FF, offset

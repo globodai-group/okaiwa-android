@@ -40,10 +40,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.features.wallet.domain.entities.BlockchainNetwork
 import io.okaiwa.features.wallet.domain.entities.ChainWallet
 import io.okaiwa.features.wallet.domain.entities.CryptoTransaction
@@ -72,7 +74,7 @@ fun WalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Wallet") },
+                title = { Text(stringResource(R.string.wallet_top_bar_title)) },
                 actions = {
                     IconButton(
                         onClick = { viewModel.refreshBalances() },
@@ -84,7 +86,7 @@ fun WalletScreen(
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.wallet_refresh_cd))
                         }
                     }
                 },
@@ -142,7 +144,7 @@ fun WalletScreen(
                     // Transaction history
                     item {
                         Text(
-                            text = "Recent transactions",
+                            text = stringResource(R.string.wallet_recent_transactions_title),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(top = 8.dp),
                         )
@@ -151,7 +153,7 @@ fun WalletScreen(
                     if (uiState.transactions.isEmpty()) {
                         item {
                             Text(
-                                text = "No transactions yet",
+                                text = stringResource(R.string.wallet_no_transactions),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -185,7 +187,7 @@ private fun TotalBalanceCard(totalBalanceUsd: Double) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Total balance",
+                text = stringResource(R.string.wallet_total_balance_label),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
@@ -302,7 +304,7 @@ private fun ChainWalletCard(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Send")
+                    Text(stringResource(R.string.wallet_send_button))
                 }
 
                 OutlinedButton(
@@ -315,11 +317,11 @@ private fun ChainWalletCard(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Receive")
+                    Text(stringResource(R.string.wallet_receive_button))
                 }
 
                 IconButton(onClick = { /* TODO: copy address */ }) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy address")
+                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.wallet_copy_address_cd))
                 }
             }
 
@@ -364,12 +366,14 @@ private fun TransactionItem(transaction: CryptoTransaction) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = when (transaction.type) {
-                    TransactionType.Send -> "Sent"
-                    TransactionType.Receive -> "Received"
-                    TransactionType.Swap -> "Swap"
-                    TransactionType.ContractInteraction -> "Contract"
-                },
+                text = stringResource(
+                    when (transaction.type) {
+                        TransactionType.Send -> R.string.wallet_transaction_sent
+                        TransactionType.Receive -> R.string.wallet_transaction_received
+                        TransactionType.Swap -> R.string.wallet_transaction_swap
+                        TransactionType.ContractInteraction -> R.string.wallet_transaction_contract
+                    },
+                ),
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(

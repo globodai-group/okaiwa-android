@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Declares the locales Okaiwa ships.
+
+  Wired into the manifest via `android:localeConfig="@xml/locales_config"`.
+  On Android 13+ this unlocks the system Settings → App languages surface
+  so the user can override the app locale independently of the device
+  locale. The same file is consumed by AppCompatDelegate on older
+  platforms through our in-app language picker (see LocaleManager).
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="fr" />
+</locale-config>

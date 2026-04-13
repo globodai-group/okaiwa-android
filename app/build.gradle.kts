@@ -198,6 +198,15 @@ dependencies {
     // AndroidX Core
     implementation(libs.core.ktx)
 
+    // AppCompat — required for AppCompatDelegate.setApplicationLocales (the
+    // pre-Android 13 in-app locale shim we call from LocaleManager). The
+    // delegate only attaches if the host activity inherits from
+    // AppCompatActivity AND the theme parent is one of Theme.AppCompat.*,
+    // so MainActivity is AppCompatActivity and Theme.Okaiwa parents
+    // Theme.AppCompat.Light.NoActionBar. Removing either breaks French
+    // language switching on Android 12 and below.
+    implementation(libs.appcompat)
+
     // Credential Manager — omnichannel save for the wallet seed phrase.
     // The runtime dialog offers the user's installed providers
     // (1Password, Dashlane, …) and falls back to Google Password Manager.

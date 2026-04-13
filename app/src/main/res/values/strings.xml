@@ -1,4 +1,342 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Okaiwa — default (English) string resources.
+
+  All user-visible copy is funneled through this file and its values-fr/
+  sibling. Keys follow the `screen_section_purpose` convention so a reader
+  can locate a string by the surface that owns it. Strings are grouped by
+  screen in the order the user encounters them during onboarding and use.
+
+  Log messages, error discriminators, and dev-only mock data are NOT
+  translated — they stay hardcoded in code, since they never reach the
+  user. See CLAUDE.md for the scoping rules.
+-->
 <resources>
+
+    <!-- App identity -->
     <string name="app_name">Okaiwa</string>
+    <string name="app_wordmark">OKAIWA</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Shared / generic -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="common_back">Back</string>
+    <string name="common_continue">Continue</string>
+    <string name="common_close">Close</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_save">Save</string>
+    <string name="common_done">Done</string>
+    <string name="common_search">Search</string>
+    <string name="common_loading">Loading…</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_error_generic">Something went wrong. Please try again.</string>
+    <string name="common_error_network">Can\'t reach the server. Check your connection.</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Welcome screen -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="welcome_tagline">Encrypted messaging.\nBuilt-in wallet.</string>
+    <string name="welcome_create_account_button">Create an account</string>
+    <string name="welcome_sign_in_button">Sign in</string>
+    <string name="welcome_terms">By continuing, you agree to our Terms of Service and Privacy Policy.</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Phone number entry -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="phone_entry_title_register">Your phone number</string>
+    <string name="phone_entry_title_login">Sign in</string>
+    <string name="phone_entry_subtitle">Confirm your country code\nand enter your phone number.</string>
+    <string name="phone_entry_country_label">Country</string>
+    <string name="phone_entry_phone_field_label">Phone number</string>
+    <string name="phone_entry_sync_contacts_label">Sync contacts</string>
+    <string name="phone_entry_continue_cd">Continue</string>
+    <string name="phone_entry_login_account_not_found_title">No Okaiwa account for this number.</string>
+    <string name="phone_entry_login_account_not_found_body">You aren\'t signed up yet. You can create an account with this number in one tap.</string>
+    <string name="phone_entry_login_create_account_cta">Create an account with this number</string>
+    <string name="phone_entry_error_request_failed">Request failed</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Country picker -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="country_picker_title">Choose a country</string>
+    <string name="country_picker_search_placeholder">Search a country</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- OTP verification -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="otp_title">6-digit code</string>
+    <string name="otp_subtitle">We just sent a code by SMS to\n%1$s</string>
+    <string name="otp_resend_in_seconds">Resend the code in %1$ds</string>
+    <string name="otp_resend_now">Resend the code</string>
+    <string name="otp_dev_hint">DEV — use 000000 to bypass</string>
+    <string name="otp_submit">Continue</string>
+    <string name="otp_error_invalid_code">Incorrect code</string>
+
+    <!-- Legacy LoginScreen — still referenced until the old auth flow
+         is fully retired. Mirrors the existing English copy. -->
+    <string name="login_tagline">Secure messaging.\nYour keys. Your data.</string>
+    <string name="login_phone_label">Phone number</string>
+    <string name="login_phone_placeholder">+33 6 12 34 56 78</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_otp_enter_title">Enter the 6-digit code</string>
+    <string name="login_otp_field_label">Verification code</string>
+    <string name="login_verify">Verify</string>
+    <string name="login_change_phone">Change phone number</string>
+    <string name="login_error_registration_failed">Registration failed</string>
+    <string name="login_error_verification_failed">Verification failed</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Profile setup (post-OTP) -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="profile_setup_title">Pick your username</string>
+    <string name="profile_setup_subtitle">Your contacts can find you using this name. You can change it later from your profile.</string>
+    <string name="profile_setup_username_placeholder">\@username</string>
+    <string name="profile_setup_display_name_placeholder">Display name (optional)</string>
+    <string name="profile_setup_bio_placeholder">Bio (optional)</string>
+    <string name="profile_setup_submit">Save my profile</string>
+    <string name="profile_setup_skip">Skip for now</string>
+    <string name="profile_setup_error_session_expired">Session expired — please sign in again.</string>
+    <string name="profile_setup_error_username_taken">That username is already taken.</string>
+    <string name="profile_setup_error_generic">Something went wrong. Please try again.</string>
+    <string name="profile_setup_error_offline">Can\'t reach the server. Check your connection.</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Profile tab -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="profile_top_bar_qr_cd">QR code</string>
+    <string name="profile_top_bar_more_cd">More</string>
+    <string name="profile_verified_cd">Pro verified account</string>
+    <string name="profile_presence_online">online</string>
+    <string name="profile_presence_offline">offline</string>
+    <string name="profile_quick_action_photo">Photo</string>
+    <string name="profile_quick_action_edit">Edit</string>
+    <string name="profile_quick_action_settings">Settings</string>
+    <string name="profile_info_mobile">Mobile</string>
+    <string name="profile_info_username">Username</string>
+    <string name="profile_info_bio">Bio</string>
+    <string name="profile_publications_active_tab">Posts</string>
+    <string name="profile_publications_archived_tab">Archived posts</string>
+    <string name="profile_publications_empty_title">No posts yet…</string>
+    <string name="profile_publications_empty_subtitle">Publish photos and videos to show on your profile page.</string>
+    <string name="profile_publications_add_button">Add a post</string>
+    <string name="profile_language_row_label">Language</string>
+    <string name="profile_more_menu_logout">Log out</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Language picker -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="language_picker_title">Language</string>
+    <string name="language_picker_system_default">System default</string>
+    <string name="language_picker_option_french">Français</string>
+    <string name="language_picker_option_english">English</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Wallet onboarding (entry) -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="wallet_onboarding_tab_title">Wallet</string>
+    <string name="wallet_onboarding_title">Your crypto wallet</string>
+    <string name="wallet_onboarding_subtitle">Send and receive crypto right inside your conversations. Your keys stay on your device.</string>
+    <string name="wallet_onboarding_create_button">Create a wallet</string>
+    <string name="wallet_onboarding_import_button">Import a wallet</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Wallet creation flow -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="wallet_create_step_method_title">Create a new wallet</string>
+
+    <!-- Method 1: Seed phrase -->
+    <string name="wallet_create_method_seed_title">Secret phrase</string>
+    <string name="wallet_create_method_seed_subtitle">Show details</string>
+    <string name="wallet_create_method_seed_badge">Recommended</string>
+    <string name="wallet_create_method_seed_body_1">24 BIP-39 words generated on your device. The only way to recover your funds if you lose your phone.</string>
+    <string name="wallet_create_method_seed_body_2">Security: 256 bits of entropy — the same standard as Ledger, Trezor, Signal.</string>
+    <string name="wallet_create_method_seed_body_3">Can be saved in 1Password, Dashlane, or your native keychain.</string>
+
+    <!-- Method 2: Passkey -->
+    <string name="wallet_create_method_passkey_title">Passkey</string>
+    <string name="wallet_create_method_passkey_subtitle">Hide details</string>
+    <string name="wallet_create_method_passkey_badge">Beta</string>
+    <string name="wallet_create_method_passkey_body_1">Create or recover a wallet with a fingerprint. This happens automatically through your device\'s passkey.</string>
+    <string name="wallet_create_method_passkey_body_2">Transactions: eight chains available on this wallet with no extra steps.</string>
+    <string name="wallet_create_method_passkey_body_3">Fees: for common transactions, expect under 200 tokens in average fees.</string>
+
+    <string name="wallet_create_method_cta">Create</string>
+
+    <!-- Step 2: Security tips -->
+    <string name="wallet_create_tips_title">Security tips</string>
+    <string name="wallet_create_tips_header_title">Your secret phrase is the key to your wallet</string>
+    <string name="wallet_create_tips_header_subtitle">Check every box to confirm you understand how important the secret phrase is.</string>
+
+    <string name="wallet_create_tips_seed_1">The secret phrase (24 words) is the ONLY way to recover my wallet. If I lose it, my funds are gone forever.</string>
+    <string name="wallet_create_tips_seed_2">I must keep it offline — paper, safe, or password manager — and NEVER share it with anyone.</string>
+    <string name="wallet_create_tips_seed_3">Okaiwa has no way to recover my secret phrase for me. No support, no server backup: security is entirely on me.</string>
+
+    <string name="wallet_create_tips_passkey_1">The private key is generated in my phone\'s StrongBox. It never leaves the device in the clear and is only accessible with my fingerprint or Face ID.</string>
+    <string name="wallet_create_tips_passkey_2">The encrypted backup is synced through Google Password Manager (Android) or iCloud Keychain (iOS). I can therefore recover my wallet on a new phone by signing in.</string>
+    <string name="wallet_create_tips_passkey_3">If I delete the passkey AND lose access to my Google/Apple account, I will lose my funds. Okaiwa has no fallback backup.</string>
+
+    <!-- Step 3: Seed display -->
+    <string name="wallet_create_seed_display_title">Your secret phrase</string>
+    <string name="wallet_create_seed_display_warning">Write these 24 words down in order and keep them offline. Nobody — including Okaiwa — can recover them for you.</string>
+    <string name="wallet_create_seed_display_save_manager">Save in a password manager</string>
+    <string name="wallet_create_seed_display_saved">Saved ✓</string>
+    <string name="wallet_create_seed_display_copy">Copy to clipboard</string>
+    <string name="wallet_create_seed_display_no_manager_toast">No password manager available — copy the phrase by hand.</string>
+    <string name="wallet_create_seed_display_copied_toast">Phrase copied (wipe it after you save)</string>
+    <string name="wallet_create_seed_display_continue">I\'ve saved my phrase</string>
+
+    <!-- Step 4: Seed verify -->
+    <string name="wallet_create_seed_verify_title">Verify your phrase</string>
+    <string name="wallet_create_seed_verify_subtitle">Pick the matching words to confirm you\'ve saved your secret phrase.</string>
+    <string name="wallet_create_seed_verify_word_header">Word #%1$d</string>
+    <string name="wallet_create_seed_verify_continue">Continue</string>
+
+    <!-- Step 4b: Passkey creation -->
+    <string name="wallet_create_passkey_step_title">Passkey</string>
+    <string name="wallet_create_passkey_heading">Create your passkey</string>
+    <string name="wallet_create_passkey_body">Your phone will ask you to confirm with your fingerprint or Face ID. The private key stays inside the StrongBox — Okaiwa never sees it.</string>
+    <string name="wallet_create_passkey_benefit_hardware_title">Hardware-generated</string>
+    <string name="wallet_create_passkey_benefit_hardware_body">Key signed by the StrongBox, non-exportable.</string>
+    <string name="wallet_create_passkey_benefit_backup_title">Encrypted cloud backup</string>
+    <string name="wallet_create_passkey_benefit_backup_body">Synced via Google Password Manager / iCloud Keychain for multi-device recovery.</string>
+    <string name="wallet_create_passkey_benefit_nophrase_title">No phrase to remember</string>
+    <string name="wallet_create_passkey_benefit_nophrase_body">Biometrics are enough — no password or mnemonic to write down.</string>
+    <string name="wallet_create_passkey_cta_idle">Create with biometrics</string>
+    <string name="wallet_create_passkey_cta_creating">Creating…</string>
+
+    <!-- Step 5: Name wallet -->
+    <string name="wallet_create_name_title">Name your wallet</string>
+    <string name="wallet_create_name_field_label">Wallet name</string>
+    <string name="wallet_create_name_placeholder">My main wallet</string>
+    <string name="wallet_create_name_helper">Between 4 and 24 characters.</string>
+    <string name="wallet_create_name_submit">Done</string>
+
+    <!-- Step 6: Ready -->
+    <string name="wallet_create_ready_dismiss">Skip</string>
+    <string name="wallet_create_ready_title">All set!\n%1$s is ready.</string>
+    <string name="wallet_create_ready_subtitle">Top up with funds to start sending and receiving.</string>
+    <string name="wallet_create_ready_fund_cta">Fund your wallet</string>
+    <string name="wallet_create_ready_fund_subtitle">Deposit from Binance, Coinbase, or any external wallet.</string>
+    <string name="wallet_create_default_name">My wallet</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Wallet overview (legacy) -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="wallet_top_bar_title">Wallet</string>
+    <string name="wallet_refresh_cd">Refresh</string>
+    <string name="wallet_total_balance_label">Total balance</string>
+    <string name="wallet_recent_transactions_title">Recent transactions</string>
+    <string name="wallet_no_transactions">No transactions yet</string>
+    <string name="wallet_send_button">Send</string>
+    <string name="wallet_receive_button">Receive</string>
+    <string name="wallet_copy_address_cd">Copy address</string>
+    <string name="wallet_transaction_sent">Sent</string>
+    <string name="wallet_transaction_received">Received</string>
+    <string name="wallet_transaction_swap">Swap</string>
+    <string name="wallet_transaction_contract">Contract</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Chat: conversation list -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="conversation_list_title">Okaiwa</string>
+    <string name="conversation_list_search_cd">Search</string>
+    <string name="conversation_list_contacts_cd">Contacts</string>
+    <string name="conversation_list_new_conversation_cd">New conversation</string>
+    <string name="conversation_list_search_close_cd">Close search</string>
+    <string name="conversation_list_search_placeholder">Search conversations</string>
+    <string name="conversation_list_empty_title">No conversations yet</string>
+    <string name="conversation_list_empty_subtitle">Start an encrypted conversation with one of your contacts.</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Chat: conversation view -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="chat_header_subtitle_encrypted">End-to-end encrypted</string>
+    <string name="chat_header_subtitle_verified">Encrypted · verified</string>
+    <string name="chat_encryption_banner_title">Messages are end-to-end encrypted</string>
+    <string name="chat_encryption_banner_body">Nobody else can read them.</string>
+    <string name="chat_message_placeholder">Message</string>
+    <string name="chat_attach_cd">Attach</string>
+    <string name="chat_send_cd">Send</string>
+    <string name="chat_play_cd">Play</string>
+    <string name="chat_image_cd">Image</string>
+    <string name="chat_crypto_sent">Sent</string>
+    <string name="chat_crypto_received">Received</string>
+    <string name="chat_crypto_confirmed">Confirmed on-chain</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Chat: new message (compose) -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="new_message_title">New message</string>
+    <string name="new_message_search_placeholder">Search contacts</string>
+    <string name="new_message_new_group">New group</string>
+    <string name="new_message_new_group_trailing">Up to 500 members</string>
+    <string name="new_message_new_channel">New channel</string>
+    <string name="new_message_new_channel_badge">Pro</string>
+    <string name="new_message_invite_contact">Invite a contact</string>
+    <string name="new_message_section_sort_by_presence">Sorted by last seen</string>
+    <string name="new_message_discovery_searching">Searching…</string>
+    <string name="new_message_discovery_not_found">No Okaiwa user for this identifier.</string>
+    <string name="new_message_discovery_start_button">Start</string>
+    <string name="new_message_presence_online">online</string>
+    <string name="new_message_presence_online_minutes_ago">last seen %1$d min ago</string>
+    <string name="new_message_presence_online_hours_ago">last seen %1$d h ago</string>
+    <string name="new_message_presence_seen_days_ago">seen %1$d days ago</string>
+    <string name="new_message_presence_seen_recently">seen recently</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Contacts (device address book picker) -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="contact_picker_title">New conversation</string>
+    <string name="contact_picker_search_placeholder">Search a contact</string>
+    <string name="contact_picker_section_okaiwa">On Okaiwa</string>
+    <string name="contact_picker_section_invite">Invite</string>
+    <string name="contact_picker_section_count">· %1$d</string>
+    <string name="contact_picker_message_action">Message</string>
+    <string name="contact_picker_invite_action">Invite</string>
+    <string name="contact_picker_invite_share_text">Join me on Okaiwa — encrypted messaging + crypto wallet. https://okaiwa.io/install</string>
+    <string name="contact_picker_invite_chooser_title">Invite %1$s</string>
+    <string name="contact_picker_permission_denied_title">Contacts access denied</string>
+    <string name="contact_picker_permission_denied_body">Okaiwa needs to read your contacts to find who is already on the platform. We hash numbers locally — they are never sent in the clear.</string>
+    <string name="contact_picker_permission_denied_cta">Allow contacts access</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Main bottom navigation -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="nav_tab_chats">Chats</string>
+    <string name="nav_tab_wallet">Wallet</string>
+    <string name="nav_tab_settings">Settings</string>
+    <string name="nav_tab_profile">Profile</string>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Settings (mostly mock today; extract labels only) -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <string name="settings_top_bar_title">Settings</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_section_privacy">Privacy &amp; Security</string>
+    <string name="settings_section_app">App</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_security_score_title">Security score</string>
+    <string name="settings_security_score_progress">%1$s — %2$d/%3$d criteria met</string>
+    <string name="settings_item_profile_title">Profile</string>
+    <string name="settings_item_profile_subtitle">Name, avatar, about</string>
+    <string name="settings_item_wallet_title">Wallet</string>
+    <string name="settings_item_wallet_subtitle">Manage crypto wallet and backup</string>
+    <string name="settings_item_privacy_title">Privacy</string>
+    <string name="settings_item_privacy_subtitle">Last seen, read receipts, blocked contacts</string>
+    <string name="settings_item_biometric_title">Biometric lock</string>
+    <string name="settings_item_biometric_subtitle">Require biometrics to open Okaiwa</string>
+    <string name="settings_item_screen_security_title">Screen security</string>
+    <string name="settings_item_screen_security_subtitle">Prevent screenshots and screen recording</string>
+    <string name="settings_item_chats_title">Chats</string>
+    <string name="settings_item_chats_subtitle">Chat backup, media auto-download</string>
+    <string name="settings_item_notifications_title">Notifications</string>
+    <string name="settings_item_notifications_subtitle">Message and call notifications</string>
+    <string name="settings_item_appearance_title">Appearance</string>
+    <string name="settings_item_appearance_subtitle">Theme, font size, language</string>
+    <string name="settings_item_about_title">About Okaiwa</string>
+    <string name="settings_item_about_subtitle">Version %1$s (%2$d)</string>
+    <string name="settings_item_delete_account_title">Delete account</string>
+    <string name="settings_item_delete_account_subtitle">Permanently delete your account and all data</string>
+
 </resources>

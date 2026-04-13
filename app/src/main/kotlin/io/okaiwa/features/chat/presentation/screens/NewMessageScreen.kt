@@ -41,11 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.chat.presentation.viewmodels.ConversationListViewModel
 import io.okaiwa.features.discovery.presentation.DiscoverySearchViewModel
@@ -95,7 +97,7 @@ fun NewMessageScreen(
                         conversationId = conv.id,
                         displayName = participant.displayName,
                         username = null,
-                        lastSeenLabel = lastSeenLabel(conv.updatedAt),
+                        updatedAtMs = conv.updatedAt,
                     )
                 }
             }
@@ -143,16 +145,16 @@ fun NewMessageScreen(
             item {
                 UtilityActionRow(
                     icon = Icons.Default.GroupAdd,
-                    title = "Nouveau groupe",
-                    trailing = "Jusqu'à 500 membres",
+                    title = stringResource(R.string.new_message_new_group),
+                    trailing = stringResource(R.string.new_message_new_group_trailing),
                     onClick = onCreateGroup,
                 )
             }
             item {
                 UtilityActionRow(
                     icon = Icons.Default.Campaign,
-                    title = "Nouveau canal",
-                    trailing = "Pro",
+                    title = stringResource(R.string.new_message_new_channel),
+                    trailing = stringResource(R.string.new_message_new_channel_badge),
                     trailingIsBadge = true,
                     onClick = onCreateChannel,
                 )
@@ -160,12 +162,12 @@ fun NewMessageScreen(
             item {
                 UtilityActionRow(
                     icon = Icons.Default.PersonAdd,
-                    title = "Inviter un contact",
+                    title = stringResource(R.string.new_message_invite_contact),
                     trailing = null,
                     onClick = onInviteContact,
                 )
             }
-            item { SectionHeader("Trier par heure de connexion") }
+            item { SectionHeader(stringResource(R.string.new_message_section_sort_by_presence)) }
 
             items(contacts, key = { it.conversationId }) { row ->
                 ContactRow(
@@ -181,7 +183,13 @@ private data class OkaiwaContactRow(
     val conversationId: String,
     val displayName: String,
     val username: String?,
-    val lastSeenLabel: String,
+    /**
+     * Raw `updatedAt` of the backing conversation. The row composable
+     * formats it into a localized "en ligne / last seen X ago" label via
+     * [lastSeenLabel] — keeping the raw timestamp in the model means the
+     * label follows the locale switch without a second data pass.
+     */
+    val updatedAtMs: Long,
 ) {
     val initial: String get() = displayName.trim().firstOrNull()?.uppercase() ?: "?"
 }
@@ -197,12 +205,12 @@ private fun TopBar(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Retour",
+                contentDescription = stringResource(R.string.common_back),
                 tint = OkaiwaColors.White,
             )
         }
         Text(
-            text = "Nouveau message",
+            text = stringResource(R.string.new_message_title),
             color = OkaiwaColors.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
@@ -218,7 +226,7 @@ private fun SearchField(value: String, onValueChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = { Text("Rechercher des contacts", color = OkaiwaColors.Placeholder) },
+        placeholder = { Text(stringResource(R.string.new_message_search_placeholder), color = OkaiwaColors.Placeholder) },
         leadingIcon = {
             Icon(Icons.Outlined.Search, contentDescription = null, tint = OkaiwaColors.Muted)
         },
@@ -345,7 +353,7 @@ private fun ContactRow(
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = row.lastSeenLabel,
+                text = lastSeenLabel(row.updatedAtMs),
                 color = OkaiwaColors.Muted,
                 fontSize = 12.sp,
             )
@@ -354,21 +362,23 @@ private fun ContactRow(
 }
 
 /**
- * French "last seen" label derived from a conversation's updatedAt.
- * Stays in the "en ligne" / "il y a Xmin" idiom Telegram-style so the
- * mock feels familiar during UX review.
+ * Localized "last seen" label derived from a conversation's updatedAt.
+ * The composable wrapper lets each branch resolve its own
+ * `stringResource(...)`, so the line re-renders in the right language
+ * the moment the user flips the locale preference.
  */
+@Composable
 private fun lastSeenLabel(timestamp: Long): String {
     val diff = System.currentTimeMillis() - timestamp
     val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
     val hours = TimeUnit.MILLISECONDS.toHours(diff)
     val days = TimeUnit.MILLISECONDS.toDays(diff)
     return when {
-        minutes < 2 -> "en ligne"
-        minutes < 60 -> "en ligne il y a ${minutes} min"
-        hours < 24 -> "en ligne il y a ${hours} h"
-        days < 7 -> "vu il y a $days j"
-        else -> "vu récemment"
+        minutes < 2 -> stringResource(R.string.new_message_presence_online)
+        minutes < 60 -> stringResource(R.string.new_message_presence_online_minutes_ago, minutes.toInt())
+        hours < 24 -> stringResource(R.string.new_message_presence_online_hours_ago, hours.toInt())
+        days < 7 -> stringResource(R.string.new_message_presence_seen_days_ago, days.toInt())
+        else -> stringResource(R.string.new_message_presence_seen_recently)
     }
 }
 
@@ -382,7 +392,7 @@ private fun DiscoveryResultRow(
 
         DiscoverySearchViewModel.State.Searching -> {
             Text(
-                text = "Recherche…",
+                text = stringResource(R.string.new_message_discovery_searching),
                 color = OkaiwaColors.Muted,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -391,7 +401,7 @@ private fun DiscoveryResultRow(
 
         DiscoverySearchViewModel.State.NotFound -> {
             Text(
-                text = "Aucun utilisateur Okaiwa pour cet identifiant.",
+                text = stringResource(R.string.new_message_discovery_not_found),
                 color = OkaiwaColors.Muted,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -443,7 +453,7 @@ private fun DiscoveryResultRow(
                     )
                 }
                 Text(
-                    text = "Démarrer",
+                    text = stringResource(R.string.new_message_discovery_start_button),
                     color = OkaiwaColors.Black,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp,

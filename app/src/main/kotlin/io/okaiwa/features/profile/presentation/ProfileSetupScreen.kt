@@ -30,11 +30,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 
 /**
@@ -80,14 +82,14 @@ fun ProfileSetupScreen(
         )
         Spacer(Modifier.height(20.dp))
         Text(
-            text = "Choisissez votre nom d'utilisateur",
+            text = stringResource(R.string.profile_setup_title),
             color = OkaiwaColors.White,
             fontWeight = FontWeight.SemiBold,
             fontSize = 22.sp,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Vos contacts pourront vous trouver avec ce nom. Vous pourrez le changer plus tard depuis votre profil.",
+            text = stringResource(R.string.profile_setup_subtitle),
             color = OkaiwaColors.WhiteDim,
             fontSize = 14.sp,
             lineHeight = 20.sp,
@@ -105,7 +107,9 @@ fun ProfileSetupScreen(
             value = state.displayName,
             onValueChange = viewModel::onDisplayNameChanged,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Nom affiché (optionnel)", color = OkaiwaColors.Placeholder) },
+            placeholder = {
+                Text(stringResource(R.string.profile_setup_display_name_placeholder), color = OkaiwaColors.Placeholder)
+            },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             textStyle = TextStyle(color = OkaiwaColors.White, fontSize = 15.sp),
@@ -117,17 +121,19 @@ fun ProfileSetupScreen(
             value = state.bio,
             onValueChange = viewModel::onBioChanged,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Bio (optionnel)", color = OkaiwaColors.Placeholder) },
+            placeholder = {
+                Text(stringResource(R.string.profile_setup_bio_placeholder), color = OkaiwaColors.Placeholder)
+            },
             shape = RoundedCornerShape(12.dp),
             maxLines = 4,
             textStyle = TextStyle(color = OkaiwaColors.White, fontSize = 14.sp),
             colors = brandColors(),
         )
 
-        if (state.error != null) {
+        state.error?.let { error ->
             Spacer(Modifier.height(16.dp))
             Text(
-                text = state.error!!,
+                text = stringResource(error.toStringRes()),
                 color = OkaiwaColors.Error,
                 fontSize = 13.sp,
                 modifier = Modifier.fillMaxWidth(),
@@ -157,7 +163,7 @@ fun ProfileSetupScreen(
                     modifier = Modifier.size(20.dp),
                 )
             } else {
-                Text(text = "Enregistrer mon profil", fontWeight = FontWeight.SemiBold)
+                Text(text = stringResource(R.string.profile_setup_submit), fontWeight = FontWeight.SemiBold)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -166,7 +172,7 @@ fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = "Passer pour l'instant",
+                text = stringResource(R.string.profile_setup_skip),
                 color = OkaiwaColors.WhiteDim,
                 fontSize = 14.sp,
             )
@@ -190,7 +196,7 @@ private fun UsernameField(value: String, onValueChange: (String) -> Unit, isVali
             onValueChange(cleaned)
         },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("@nomutilisateur", color = OkaiwaColors.Placeholder) },
+        placeholder = { Text(stringResource(R.string.profile_setup_username_placeholder), color = OkaiwaColors.Placeholder) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         textStyle = TextStyle(color = OkaiwaColors.White, fontSize = 16.sp),
@@ -198,6 +204,19 @@ private fun UsernameField(value: String, onValueChange: (String) -> Unit, isVali
         // recompute the whole struct via brandErrorColors() when invalid.
         colors = if (isValid) brandColors() else brandErrorColors(),
     )
+}
+
+/**
+ * Map a [ProfileSetupViewModel.Error] to the localized string resource
+ * the UI should render. Keeping the mapping in one place means a future
+ * error variant only needs a single entry here plus a new key in
+ * strings.xml / values-fr/strings.xml.
+ */
+private fun ProfileSetupViewModel.Error.toStringRes(): Int = when (this) {
+    ProfileSetupViewModel.Error.SessionExpired -> R.string.profile_setup_error_session_expired
+    ProfileSetupViewModel.Error.UsernameTaken -> R.string.profile_setup_error_username_taken
+    ProfileSetupViewModel.Error.Generic -> R.string.profile_setup_error_generic
+    ProfileSetupViewModel.Error.Offline -> R.string.profile_setup_error_offline
 }
 
 @Composable

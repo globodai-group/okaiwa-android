@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.chat.domain.entities.Message
 import io.okaiwa.features.chat.domain.entities.MessageStatus
@@ -103,7 +105,10 @@ fun ChatScreen(
     ) {
         ChatTopBar(
             title = uiState.title,
-            subtitle = if (uiState.isVerified) "Chiffré · vérifié" else "Chiffré de bout en bout",
+            subtitle = stringResource(
+                if (uiState.isVerified) R.string.chat_header_subtitle_verified
+                else R.string.chat_header_subtitle_encrypted,
+            ),
             onNavigateBack = onNavigateBack,
         )
 
@@ -160,7 +165,7 @@ private fun ChatTopBar(
         IconButton(onClick = onNavigateBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Retour",
+                contentDescription = stringResource(R.string.common_back),
                 tint = OkaiwaColors.White,
             )
         }
@@ -283,7 +288,7 @@ private fun ImageBubble(
         ) {
             Icon(
                 imageVector = Icons.Default.Image,
-                contentDescription = "Image",
+                contentDescription = stringResource(R.string.chat_image_cd),
                 tint = OkaiwaColors.Muted,
                 modifier = Modifier.size(48.dp),
             )
@@ -333,7 +338,7 @@ private fun VoiceNoteBubble(
         ) {
             Icon(
                 imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Lire",
+                contentDescription = stringResource(R.string.chat_play_cd),
                 tint = if (isOutgoing) OkaiwaColors.Black else OkaiwaColors.Lime,
                 modifier = Modifier.size(20.dp),
             )
@@ -409,7 +414,10 @@ private fun CryptoPaymentBubble(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = if (isOutgoing) "Envoyé" else "Reçu",
+                text = stringResource(
+                    if (isOutgoing) R.string.chat_crypto_sent
+                    else R.string.chat_crypto_received,
+                ),
                 color = if (isOutgoing) OkaiwaColors.Black else OkaiwaColors.Lime,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -424,7 +432,7 @@ private fun CryptoPaymentBubble(
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = "Confirmé on-chain",
+            text = stringResource(R.string.chat_crypto_confirmed),
             color = if (isOutgoing) OkaiwaColors.Black.copy(alpha = 0.7f) else OkaiwaColors.Muted,
             fontSize = 11.sp,
         )
@@ -489,13 +497,13 @@ private fun EncryptionBanner(modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Messages chiffrés de bout en bout",
+            text = stringResource(R.string.chat_encryption_banner_title),
             color = OkaiwaColors.WhiteDim,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = "Personne d'autre que vous ne peut les lire.",
+            text = stringResource(R.string.chat_encryption_banner_body),
             color = OkaiwaColors.Muted,
             fontSize = 11.sp,
         )
@@ -519,7 +527,7 @@ private fun MessageInputBar(
         IconButton(onClick = { /* TODO: attach */ }) {
             Icon(
                 imageVector = Icons.Default.AttachFile,
-                contentDescription = "Joindre",
+                contentDescription = stringResource(R.string.chat_attach_cd),
                 tint = OkaiwaColors.Muted,
             )
         }
@@ -528,7 +536,7 @@ private fun MessageInputBar(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Message", color = OkaiwaColors.Placeholder) },
+            placeholder = { Text(stringResource(R.string.chat_message_placeholder), color = OkaiwaColors.Placeholder) },
             maxLines = 5,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { onSend() }),
@@ -557,7 +565,7 @@ private fun MessageInputBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Envoyer",
+                    contentDescription = stringResource(R.string.chat_send_cd),
                     tint = if (value.isNotBlank()) OkaiwaColors.Black else OkaiwaColors.Muted,
                     modifier = Modifier.size(20.dp),
                 )

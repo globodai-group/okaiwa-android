@@ -42,12 +42,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 import io.okaiwa.features.contacts.domain.entities.DeviceContact
 import io.okaiwa.features.contacts.presentation.viewmodels.ContactsViewModel
@@ -113,34 +115,60 @@ fun ContactPickerScreen(
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator(color = OkaiwaColors.Lime) }
 
-                    else -> LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        if (uiState.okaiwaContacts.isNotEmpty()) {
-                            item { SectionHeader("Sur Okaiwa", uiState.okaiwaContacts.size) }
-                            items(uiState.okaiwaContacts, key = { "ok-${it.id}" }) { contact ->
-                                OkaiwaContactRow(
-                                    contact = contact,
-                                    onClick = { onStartConversation(contact) },
-                                )
-                            }
+                    else -> {
+                        // Pull the localized strings out of the LazyColumn
+                        // body — the items-builder blocks aren't composable
+                        // contexts, so `stringResource(...)` has to be
+                        // hoisted to the enclosing composable where it is.
+                        val sectionOkaiwa = stringResource(R.string.contact_picker_section_okaiwa)
+                        val sectionInvite = stringResource(R.string.contact_picker_section_invite)
+                        val inviteShareText = stringResource(R.string.contact_picker_invite_share_text)
+                        // Each contact has a different display name, so we
+                        // can't pre-resolve the chooser title once: capture
+                        // the Context-bound getString into a lambda that we
+                        // invoke at click time with the specific name.
+                        val resources = context.resources
+                        val chooserTitleFor: (String) -> String = { name ->
+                            resources.getString(R.string.contact_picker_invite_chooser_title, name)
                         }
-                        if (uiState.inviteContacts.isNotEmpty()) {
-                            item { SectionHeader("Inviter", uiState.inviteContacts.size) }
-                            items(uiState.inviteContacts, key = { "inv-${it.id}" }) { contact ->
-                                InviteContactRow(
-                                    contact = contact,
-                                    onClick = {
-                                        val share = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(
-                                                Intent.EXTRA_TEXT,
-                                                "Rejoins-moi sur Okaiwa — messagerie chiffrée + wallet crypto. https://okaiwa.io/install",
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (uiState.okaiwaContacts.isNotEmpty()) {
+                                item {
+                                    SectionHeader(
+                                        title = sectionOkaiwa,
+                                        count = uiState.okaiwaContacts.size,
+                                    )
+                                }
+                                items(uiState.okaiwaContacts, key = { "ok-${it.id}" }) { contact ->
+                                    OkaiwaContactRow(
+                                        contact = contact,
+                                        onClick = { onStartConversation(contact) },
+                                    )
+                                }
+                            }
+                            if (uiState.inviteContacts.isNotEmpty()) {
+                                item {
+                                    SectionHeader(
+                                        title = sectionInvite,
+                                        count = uiState.inviteContacts.size,
+                                    )
+                                }
+                                items(uiState.inviteContacts, key = { "inv-${it.id}" }) { contact ->
+                                    InviteContactRow(
+                                        contact = contact,
+                                        onClick = {
+                                            val share = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_TEXT, inviteShareText)
+                                            }
+                                            context.startActivity(
+                                                Intent.createChooser(share, chooserTitleFor(contact.displayName)),
                                             )
-                                        }
-                                        context.startActivity(Intent.createChooser(share, "Inviter ${contact.displayName}"))
-                                    },
-                                )
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -161,12 +189,12 @@ private fun TopBar(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Retour",
+                contentDescription = stringResource(R.string.common_back),
                 tint = OkaiwaColors.White,
             )
         }
         Text(
-            text = "Nouvelle conversation",
+            text = stringResource(R.string.contact_picker_title),
             color = OkaiwaColors.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
@@ -182,7 +210,7 @@ private fun SearchField(value: String, onValueChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = { Text("Rechercher un contact", color = OkaiwaColors.Placeholder) },
+        placeholder = { Text(stringResource(R.string.contact_picker_search_placeholder), color = OkaiwaColors.Placeholder) },
         leadingIcon = {
             Icon(Icons.Outlined.Search, contentDescription = null, tint = OkaiwaColors.Muted)
         },
@@ -215,7 +243,7 @@ private fun SectionHeader(title: String, count: Int) {
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = "· $count",
+            text = stringResource(R.string.contact_picker_section_count, count),
             color = OkaiwaColors.Muted,
             fontSize = 11.sp,
         )
@@ -238,7 +266,7 @@ private fun OkaiwaContactRow(contact: DeviceContact, onClick: () -> Unit) {
             Text(contact.okaiwaUsername ?: contact.phoneNumberE164, color = OkaiwaColors.Muted, fontSize = 12.sp)
         }
         Text(
-            text = "Message",
+            text = stringResource(R.string.contact_picker_message_action),
             color = OkaiwaColors.Lime,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
@@ -268,7 +296,7 @@ private fun InviteContactRow(contact: DeviceContact, onClick: () -> Unit) {
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
             Text(
-                text = "Inviter",
+                text = stringResource(R.string.contact_picker_invite_action),
                 color = OkaiwaColors.Lime,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -323,7 +351,7 @@ private fun PermissionDeniedState(onRetry: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Accès aux contacts refusé",
+            text = stringResource(R.string.contact_picker_permission_denied_title),
             color = OkaiwaColors.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
@@ -331,7 +359,7 @@ private fun PermissionDeniedState(onRetry: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Okaiwa a besoin de lire vos contacts pour trouver qui est déjà sur la plateforme. Nous hashons les numéros localement — ils ne sont jamais envoyés en clair.",
+            text = stringResource(R.string.contact_picker_permission_denied_body),
             color = OkaiwaColors.WhiteDim,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
@@ -346,7 +374,7 @@ private fun PermissionDeniedState(onRetry: () -> Unit) {
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         ) {
             Text(
-                text = "Autoriser l'accès aux contacts",
+                text = stringResource(R.string.contact_picker_permission_denied_cta),
                 color = OkaiwaColors.Black,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,

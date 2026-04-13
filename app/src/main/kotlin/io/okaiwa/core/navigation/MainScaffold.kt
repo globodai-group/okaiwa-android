@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -43,35 +44,44 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.okaiwa.R
 import io.okaiwa.core.theme.OkaiwaColors
 
-/** Primary surfaces of the app, selected via the floating bottom bar. */
+/**
+ * Primary surfaces of the app, selected via the floating bottom bar.
+ *
+ * [labelRes] points at a string resource rather than a hardcoded literal
+ * so the tab titles follow the user's Français / English preference —
+ * the bar itself resolves the resource through `stringResource()` on
+ * every recomposition, which means a locale flip propagates instantly.
+ */
 enum class MainTab(
-    val label: String,
+    @StringRes val labelRes: Int,
     val iconSelected: ImageVector,
     val iconUnselected: ImageVector,
 ) {
     Chats(
-        label = "Échanges",
+        labelRes = R.string.nav_tab_chats,
         iconSelected = Icons.Filled.ChatBubble,
         iconUnselected = Icons.Outlined.ChatBubbleOutline,
     ),
     Wallet(
-        label = "Wallet",
+        labelRes = R.string.nav_tab_wallet,
         iconSelected = Icons.Filled.AccountBalanceWallet,
         iconUnselected = Icons.Outlined.AccountBalanceWallet,
     ),
     Settings(
-        label = "Paramètres",
+        labelRes = R.string.nav_tab_settings,
         iconSelected = Icons.Filled.Settings,
         iconUnselected = Icons.Outlined.Settings,
     ),
     Profile(
-        label = "Profil",
+        labelRes = R.string.nav_tab_profile,
         iconSelected = Icons.Filled.Person,
         iconUnselected = Icons.Outlined.PersonOutline,
     ),
@@ -212,15 +222,16 @@ private fun RowScope.TabItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        val label = stringResource(tab.labelRes)
         Icon(
             imageVector = if (isSelected) tab.iconSelected else tab.iconUnselected,
-            contentDescription = tab.label,
+            contentDescription = label,
             tint = tint,
             modifier = Modifier.size(24.dp),
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = tab.label,
+            text = label,
             color = tint,
             fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
