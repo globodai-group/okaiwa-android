@@ -105,6 +105,35 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        // libsignal-android ships both libsignal_jni.so (production) AND
+        // libsignal_jni_testing.so (~70 MB per ABI of test fixtures).
+        // The testing variant is only useful for libsignal's own JUnit
+        // suite; we never reference it from app code, so excluding it
+        // saves ~280 MB across the four ABIs.
+        jniLibs {
+            excludes += "**/libsignal_jni_testing.so"
+        }
+    }
+
+    /**
+     * APK ABI splits — produce one APK per architecture instead of a
+     * universal fat binary. Each split ships only its own .so files
+     * (libsignal_jni.so + libTrustWalletCore.so + libsqlcipher.so are
+     * the heavy hitters), which keeps the per-device download under
+     * Firebase App Distribution's 200 MB limit and matches what the
+     * Play Store would generate from an AAB.
+     */
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            // arm64-v8a covers ~99% of modern Android devices in 2026.
+            // armeabi-v7a kept for legacy Android Go phones in EM markets.
+            // x86 / x86_64 dropped — emulator-only and we can build a
+            // dedicated emulator APK on demand.
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
     }
 }
 
