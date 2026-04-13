@@ -154,6 +154,12 @@ dependencies {
     // AndroidX Core
     implementation(libs.core.ktx)
 
+    // Credential Manager — omnichannel save for the wallet seed phrase.
+    // The runtime dialog offers the user's installed providers
+    // (1Password, Dashlane, …) and falls back to Google Password Manager.
+    implementation(libs.credentials)
+    implementation(libs.credentials.auth)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

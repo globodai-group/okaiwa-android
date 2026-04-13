@@ -26,6 +26,7 @@ import io.okaiwa.features.chat.presentation.screens.NewMessageScreen
 import io.okaiwa.features.contacts.presentation.screens.ContactPickerScreen
 import io.okaiwa.features.profile.presentation.screens.ProfileScreen
 import io.okaiwa.features.settings.presentation.screens.SettingsScreen
+import io.okaiwa.features.wallet.presentation.onboarding.WalletOnboardingFlow
 import io.okaiwa.features.wallet.presentation.screens.WalletOnboardingScreen
 
 /**
@@ -62,6 +63,8 @@ sealed class Screen(val route: String) {
     data object NewMessage : Screen("new_message")
     /** Contacts icon entry — device address book with READ_CONTACTS. */
     data object ContactPicker : Screen("contacts")
+    /** Wallet creation onboarding (method → tips → seed → verify → name → ready). */
+    data object WalletCreate : Screen("wallet/create")
 }
 
 /**
@@ -179,7 +182,9 @@ fun AppNavigation(
                     // create/import CTA so we never advertise a "0 ETH"
                     // empty state that could read as a hollow promise.
                     MainTab.Wallet -> WalletOnboardingScreen(
-                        onCreateWallet = { /* TODO: push seed-phrase gen flow */ },
+                        onCreateWallet = {
+                            navController.navigate(Screen.WalletCreate.route)
+                        },
                         onImportWallet = { /* TODO: push mnemonic import flow */ },
                     )
 
@@ -227,6 +232,13 @@ fun AppNavigation(
                     // the next commit.
                     navController.popBackStack()
                 },
+            )
+        }
+
+        composable(Screen.WalletCreate.route) {
+            WalletOnboardingFlow(
+                onFinished = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() },
             )
         }
     }
