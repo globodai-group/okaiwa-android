@@ -44,6 +44,8 @@ data class SignedPreKeyDto(
 @Serializable
 data class RegisterResponse(
     val accountId: String,
+    /** Relay-addressable device identifier (UUIDv4). */
+    val deviceId: String? = null,
     val status: String,
 )
 
@@ -55,18 +57,45 @@ data class VerifyRequest(
     val code: String,
 )
 
-/** Response to `POST /v1/auth/verify` and `POST /v1/auth/refresh`. */
+/**
+ * Response to `POST /v1/auth/verify`. The verify endpoint is the only
+ * place the relay deviceToken is minted — refresh re-issues the session
+ * tokens but NOT the deviceToken (which is long-lived per the relay's
+ * MAX_TOKEN_AGE_SECONDS check).
+ */
 @Serializable
 data class SessionTokenResponse(
     val sessionToken: String,
     val refreshToken: String,
     val expiresIn: Int,
+    /** Relay-addressable device identifier — only present on verify. */
+    val deviceId: String? = null,
+    /**
+     * HMAC-signed token of the form `{deviceId}.{timestamp}.{hmac}`.
+     * Required as `Authorization: Bearer <deviceToken>` on every relay
+     * request (POST /v1/messages/send, GET /v1/messages/pending,
+     * DELETE /v1/messages/:id). Only present on verify.
+     */
+    val deviceToken: String? = null,
 )
 
 /** Body of `POST /v1/auth/refresh`. */
 @Serializable
 data class RefreshRequest(
     val refreshToken: String,
+)
+
+/** Body of `POST /v1/auth/login` — symmetric to register but for existing accounts. */
+@Serializable
+data class LoginRequest(
+    val phoneHash: String,
+)
+
+/** Response to `POST /v1/auth/login`. */
+@Serializable
+data class LoginResponse(
+    val accountId: String,
+    val status: String,
 )
 
 /**

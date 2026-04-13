@@ -65,6 +65,8 @@ class SessionStore @Inject constructor(
             .putString(KEY_REFRESH, session.refreshToken)
             .putLong(KEY_EXPIRES_AT, session.expiresAtEpochSeconds)
             .putString(KEY_ACCOUNT_ID, session.accountId)
+            .putString(KEY_DEVICE_ID, session.deviceId)
+            .putString(KEY_DEVICE_TOKEN, session.deviceToken)
             .apply()
         _sessionFlow.value = session
     }
@@ -78,6 +80,8 @@ class SessionStore @Inject constructor(
         val access = prefs.getString(KEY_ACCESS, null) ?: return null
         val refresh = prefs.getString(KEY_REFRESH, null) ?: return null
         val accountId = prefs.getString(KEY_ACCOUNT_ID, null) ?: return null
+        val deviceId = prefs.getString(KEY_DEVICE_ID, "") ?: ""
+        val deviceToken = prefs.getString(KEY_DEVICE_TOKEN, "") ?: ""
         val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
         // phoneHash is intentionally not restored from disk — see the
         // class kdoc. The session is hydrated without it; the verify
@@ -89,6 +93,8 @@ class SessionStore @Inject constructor(
             accessToken = access,
             refreshToken = refresh,
             expiresAtEpochSeconds = expiresAt,
+            deviceId = deviceId,
+            deviceToken = deviceToken,
         )
     }
 
@@ -98,6 +104,8 @@ class SessionStore @Inject constructor(
         private const val KEY_REFRESH = "refresh_token"
         private const val KEY_EXPIRES_AT = "expires_at_epoch_seconds"
         private const val KEY_ACCOUNT_ID = "account_id"
+        private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_DEVICE_TOKEN = "device_token"
     }
 }
 
@@ -107,6 +115,10 @@ class SessionStore @Inject constructor(
  * `phoneHash` is kept client-side so the verify step can re-submit the
  * same hash that was used at registration without asking the user to
  * re-enter the number.
+ *
+ * `deviceId` + `deviceToken` are issued by the identity service at
+ * verify time and consumed by the relay service exclusively — the
+ * identity service has no business reading them once minted.
  */
 data class Session(
     val accountId: String,
@@ -114,7 +126,12 @@ data class Session(
     val accessToken: String,
     val refreshToken: String,
     val expiresAtEpochSeconds: Long,
+    val deviceId: String = "",
+    val deviceToken: String = "",
 ) {
     val isFresh: Boolean
         get() = System.currentTimeMillis() / 1000L < expiresAtEpochSeconds
+
+    val isVerified: Boolean
+        get() = accessToken.isNotEmpty() && deviceToken.isNotEmpty()
 }

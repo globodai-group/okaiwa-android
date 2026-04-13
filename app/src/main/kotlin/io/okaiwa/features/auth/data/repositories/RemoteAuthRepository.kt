@@ -2,8 +2,8 @@ package io.okaiwa.features.auth.data.repositories
 
 import io.okaiwa.core.errors.AppError
 import io.okaiwa.core.errors.toAppError
-import io.okaiwa.features.auth.data.crypto.MockSignalKeyBundle
 import io.okaiwa.features.auth.data.crypto.PhoneHasher
+import io.okaiwa.features.auth.data.crypto.SignalIdentityKeys
 import io.okaiwa.features.auth.data.remote.AuthApi
 import io.okaiwa.features.auth.data.remote.RefreshRequest
 import io.okaiwa.features.auth.data.remote.RegisterRequest
@@ -36,16 +36,17 @@ import javax.inject.Singleton
  *   3. `refreshToken()` — posts the refresh token to `POST /v1/auth/
  *      refresh` and rotates the stored session.
  *
- * The Signal key bundle passed to register is currently a random-bytes
- * placeholder (see [MockSignalKeyBundle]) — the libsignal-backed real
- * one lands once `okaiwa-signal-core` ships its AAR. The backend still
- * stores the placeholder because the Vine validators only check
- * length/regex, not cryptographic validity.
+ * The Signal key bundle is generated on-device by [SignalIdentityKeys],
+ * which wraps libsignal-android (real Curve25519 identity keys + signed
+ * pre-key + one-time pre-key pool). The keys are persisted in an
+ * encrypted store so the same identity survives app restarts — peers
+ * who have cached our PreKeyBundle can still establish a session.
  */
 @Singleton
 class RemoteAuthRepository @Inject constructor(
     private val api: AuthApi,
     private val sessionStore: SessionStore,
+    private val signalIdentityKeys: SignalIdentityKeys,
 ) : AuthRepository {
 
     override fun observeCurrentUser(): Flow<User?> =
@@ -61,7 +62,11 @@ class RemoteAuthRepository @Inject constructor(
      */
     override suspend fun requestOtp(phoneNumber: String): String {
         val phoneHash = PhoneHasher.hashE164(phoneNumber)
-        val bundle = MockSignalKeyBundle.generate()
+        // Real libsignal Curve25519 identity bundle. `registrationBundle()`
+        // generates fresh keys on first launch and persists them; later
+        // calls hydrate the cached ones so re-registering uses the same
+        // device identity.
+        val bundle = signalIdentityKeys.registrationBundle()
 
         val response = api.register(
             RegisterRequest(
@@ -82,6 +87,8 @@ class RemoteAuthRepository @Inject constructor(
                 accessToken = "",
                 refreshToken = "",
                 expiresAtEpochSeconds = 0L,
+                deviceId = body.deviceId ?: "",
+                deviceToken = "",
             )
         )
 
@@ -103,6 +110,8 @@ class RemoteAuthRepository @Inject constructor(
             accessToken = body.sessionToken,
             refreshToken = body.refreshToken,
             expiresAtEpochSeconds = (System.currentTimeMillis() / 1000L) + body.expiresIn,
+            deviceId = body.deviceId ?: pending.deviceId,
+            deviceToken = body.deviceToken ?: "",
         ).toUserStub()
     }
 
@@ -148,6 +157,7 @@ class RemoteAuthRepository @Inject constructor(
         phoneHash: String,
         tokens: SessionTokenResponse,
     ) {
+        val previous = sessionStore.current()
         sessionStore.save(
             Session(
                 accountId = accountId,
@@ -155,6 +165,11 @@ class RemoteAuthRepository @Inject constructor(
                 accessToken = tokens.sessionToken,
                 refreshToken = tokens.refreshToken,
                 expiresAtEpochSeconds = (System.currentTimeMillis() / 1000L) + tokens.expiresIn,
+                // Refresh re-issues the session token but NOT the
+                // deviceToken (which is long-lived per the relay's
+                // MAX_TOKEN_AGE_SECONDS check). Keep the existing one.
+                deviceId = tokens.deviceId ?: previous?.deviceId.orEmpty(),
+                deviceToken = tokens.deviceToken ?: previous?.deviceToken.orEmpty(),
             )
         )
     }
