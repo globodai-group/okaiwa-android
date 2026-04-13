@@ -198,14 +198,24 @@ fun AppNavigation(
             val otpVm: OtpVerificationViewModel = hiltViewModel()
             val otpState by otpVm.state.collectAsState()
 
-            LaunchedEffect(otpState.verified) {
-                if (otpState.verified) {
-                    // Fresh verify always lands on ProfileSetup — the
-                    // user picks a username + optional displayName/bio
-                    // before reaching the main scaffold. Skip option
-                    // marks the session flag so subsequent launches
-                    // bypass this step entirely.
-                    navController.navigate(Screen.ProfileSetup.route) {
+            LaunchedEffect(otpState.verified, otpState.nextStep) {
+                // The VM asked the server whether this account
+                // already has a username. New users → ProfileSetup.
+                // Returning users (reinstall, multi-device) → Main
+                // directly. Without this branch a reinstall on the
+                // same phone would force the user to retype their
+                // username and immediately hit a 409.
+                //
+                // nextStep can be null while the bootstrap call is
+                // in flight — keep the screen as-is until the VM
+                // either resolves a destination or surfaces an error.
+                val target = when (otpState.nextStep) {
+                    OtpVerificationViewModel.NextStep.Main -> Screen.Main.route
+                    OtpVerificationViewModel.NextStep.ProfileSetup -> Screen.ProfileSetup.route
+                    null -> null
+                }
+                if (otpState.verified && target != null) {
+                    navController.navigate(target) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 }

@@ -114,6 +114,67 @@ class RemoteProfileRepository @Inject constructor(
     }
 
     /**
+     * Eager fetch used by the OnboardingFlow right after a successful
+     * /v1/auth/verify to decide whether to land on Main (profile
+     * already exists server-side — reinstall / multi-device) or
+     * ProfileSetup (first-time account).
+     *
+     * Typed result matters here: folding 401/network-failure into the
+     * same "no username" bucket that 404 uses would push the user
+     * through ProfileSetup on a transient failure and immediately hit
+     * HTTP 409 on the username PUT — exactly the bug this bootstrap
+     * exists to prevent.
+     *
+     *   - [Existing] — server returned a non-blank username, user goes
+     *     straight to Main. The cache is populated as a side-effect.
+     *   - [NewUser]  — server returned 404 or 200 with null/blank
+     *     username, user goes through ProfileSetup.
+     *   - [AuthFailure]  — token was rejected (401/403). Block
+     *     navigation; the OTP screen will surface a re-auth path.
+     *   - [TransientFailure] — network / 5xx / parse error. Block
+     *     navigation; same OTP screen retry path as above.
+     */
+    sealed class ProfileBootstrap {
+        data class Existing(val username: String) : ProfileBootstrap()
+        data object NewUser : ProfileBootstrap()
+        data object AuthFailure : ProfileBootstrap()
+        data object TransientFailure : ProfileBootstrap()
+    }
+
+    suspend fun fetchUsernameForBootstrap(): ProfileBootstrap {
+        val session = sessionStore.current() ?: return ProfileBootstrap.AuthFailure
+        val accessToken = session.accessToken.takeIf { it.isNotEmpty() }
+            ?: return ProfileBootstrap.AuthFailure
+
+        val response = runCatching {
+            api.getMyProfile(bearer = "Bearer $accessToken")
+        }.getOrNull() ?: return ProfileBootstrap.TransientFailure
+
+        return when {
+            response.code() == 401 || response.code() == 403 -> ProfileBootstrap.AuthFailure
+            response.code() == 404 -> ProfileBootstrap.NewUser
+            !response.isSuccessful -> ProfileBootstrap.TransientFailure
+            else -> {
+                val body = response.body() ?: return ProfileBootstrap.TransientFailure
+                // Cross-check the accountId echoed by the server against
+                // the one we derived from the token at verify time. If
+                // they don't match, something is very wrong (proxy
+                // mis-routing, replay, compromised backend) and
+                // propagating someone else's profile into the local
+                // cache would be a cross-account leak.
+                if (session.accountId.isNotEmpty() &&
+                    body.accountId != session.accountId
+                ) {
+                    return ProfileBootstrap.TransientFailure
+                }
+                state.value = body.toUserProfile(phoneE164 = session.phoneE164)
+                val handle = body.username?.trim()?.takeIf { it.isNotBlank() }
+                if (handle != null) ProfileBootstrap.Existing(handle) else ProfileBootstrap.NewUser
+            }
+        }
+    }
+
+    /**
      * Pull the canonical profile from the server and merge into the
      * in-memory flow. Called on first subscription and from refresh().
      */

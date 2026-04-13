@@ -3,7 +3,9 @@ package io.okaiwa.features.auth.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.okaiwa.features.auth.data.session.SessionStore
 import io.okaiwa.features.auth.domain.usecases.VerifyOtpUseCase
+import io.okaiwa.features.profile.data.repositories.RemoteProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,17 +19,39 @@ import javax.inject.Inject
  * which pulls the phoneHash from the SessionStore stashed at register
  * time. On success the repository persists the opaque access + refresh
  * tokens into EncryptedSharedPreferences and this VM flips `verified`,
- * letting the Navigation layer pop the OTP route and land on /main.
+ * letting the Navigation layer pop the OTP route.
+ *
+ * Where the user lands NEXT depends on whether the server already
+ * holds a profile for this account. We fetch /v1/profile/me right
+ * after verify and decide:
+ *   - profile.username present → server already knows this user
+ *     (repeat-install / multi-device login), skip ProfileSetup
+ *     and land on Main directly. The local profileSetupDone flag
+ *     is flipped to match.
+ *   - profile.username absent → first-time setup, route to
+ *     ProfileSetup as before.
+ *
+ * Without this branch every reinstall (which wipes the local
+ * EncryptedSharedPreferences) forced the user to retype their
+ * profile and immediately failed with HTTP 409 "username taken"
+ * because the server still held the previous registration.
  */
 @HiltViewModel
 class OtpVerificationViewModel @Inject constructor(
     private val verifyOtpUseCase: VerifyOtpUseCase,
+    private val sessionStore: SessionStore,
+    private val profileRepository: RemoteProfileRepository,
 ) : ViewModel() {
+
+    enum class NextStep { Main, ProfileSetup }
 
     data class UiState(
         val isLoading: Boolean = false,
         val error: String? = null,
         val verified: Boolean = false,
+        // Null until the post-verify bootstrap decides; the nav layer
+        // should treat `verified && nextStep != null` as the trigger.
+        val nextStep: NextStep? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -45,7 +69,39 @@ class OtpVerificationViewModel @Inject constructor(
             // validator keeps it compatible with the stub impl.
             verifyOtpUseCase(sessionToken = code, otpCode = code)
                 .onSuccess {
-                    _state.value = UiState(verified = true)
+                    // Server is the source of truth: if the account
+                    // already has a username, we MUST NOT push the
+                    // user back through ProfileSetup — they'd retype
+                    // the same handle and hit a 409. Pre-existing
+                    // accounts go straight to Main. Typed result is
+                    // load-bearing: a raw `null` on transient failure
+                    // would have routed to ProfileSetup and triggered
+                    // the very 409 this bootstrap exists to prevent.
+                    when (val outcome = profileRepository.fetchUsernameForBootstrap()) {
+                        is RemoteProfileRepository.ProfileBootstrap.Existing -> {
+                            sessionStore.markProfileSetupDone()
+                            _state.value = UiState(
+                                verified = true,
+                                nextStep = NextStep.Main,
+                            )
+                        }
+                        RemoteProfileRepository.ProfileBootstrap.NewUser -> {
+                            _state.value = UiState(
+                                verified = true,
+                                nextStep = NextStep.ProfileSetup,
+                            )
+                        }
+                        RemoteProfileRepository.ProfileBootstrap.AuthFailure -> {
+                            _state.value = UiState(
+                                error = "Session expirée, veuillez recommencer",
+                            )
+                        }
+                        RemoteProfileRepository.ProfileBootstrap.TransientFailure -> {
+                            _state.value = UiState(
+                                error = "Connexion au serveur impossible, réessayez",
+                            )
+                        }
+                    }
                 }
                 .onFailure { t ->
                     _state.value = UiState(error = t.message ?: "Code incorrect")
