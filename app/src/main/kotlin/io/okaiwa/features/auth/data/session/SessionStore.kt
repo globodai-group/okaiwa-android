@@ -67,8 +67,19 @@ class SessionStore @Inject constructor(
             .putString(KEY_ACCOUNT_ID, session.accountId)
             .putString(KEY_DEVICE_ID, session.deviceId)
             .putString(KEY_DEVICE_TOKEN, session.deviceToken)
+            .putBoolean(KEY_PROFILE_DONE, session.profileSetupDone)
             .apply()
         _sessionFlow.value = session
+    }
+
+    /**
+     * Shorthand to mark the user's profile setup as complete without
+     * having to reconstruct the full session object at every call site.
+     * Persists the flag + updates the observer flow.
+     */
+    fun markProfileSetupDone() {
+        val existing = _sessionFlow.value ?: return
+        save(existing.copy(profileSetupDone = true))
     }
 
     fun clear() {
@@ -83,6 +94,7 @@ class SessionStore @Inject constructor(
         val deviceId = prefs.getString(KEY_DEVICE_ID, "") ?: ""
         val deviceToken = prefs.getString(KEY_DEVICE_TOKEN, "") ?: ""
         val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
+        val profileDone = prefs.getBoolean(KEY_PROFILE_DONE, false)
         // phoneHash is intentionally not restored from disk — see the
         // class kdoc. The session is hydrated without it; the verify
         // step will fail until the user re-enters the phone, which
@@ -95,6 +107,7 @@ class SessionStore @Inject constructor(
             expiresAtEpochSeconds = expiresAt,
             deviceId = deviceId,
             deviceToken = deviceToken,
+            profileSetupDone = profileDone,
         )
     }
 
@@ -106,6 +119,7 @@ class SessionStore @Inject constructor(
         private const val KEY_ACCOUNT_ID = "account_id"
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_DEVICE_TOKEN = "device_token"
+        private const val KEY_PROFILE_DONE = "profile_setup_done"
     }
 }
 
@@ -128,6 +142,12 @@ data class Session(
     val expiresAtEpochSeconds: Long,
     val deviceId: String = "",
     val deviceToken: String = "",
+    /**
+     * Whether the post-verify profile setup (username, displayName, …)
+     * has been completed. Used by the navigation layer to decide
+     * between ProfileSetup and Main on cold start.
+     */
+    val profileSetupDone: Boolean = false,
 ) {
     val isFresh: Boolean
         get() = System.currentTimeMillis() / 1000L < expiresAtEpochSeconds

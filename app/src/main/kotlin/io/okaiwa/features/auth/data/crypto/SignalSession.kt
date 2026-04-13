@@ -2,7 +2,6 @@ package io.okaiwa.features.auth.data.crypto
 
 import org.signal.libsignal.protocol.SessionCipher
 import org.signal.libsignal.protocol.SignalProtocolAddress
-import org.signal.libsignal.protocol.UsePqRatchet
 import org.signal.libsignal.protocol.message.CiphertextMessage
 import org.signal.libsignal.protocol.message.PreKeySignalMessage
 import org.signal.libsignal.protocol.message.SignalMessage
@@ -78,15 +77,12 @@ class SignalSession @Inject constructor(
         val type = typeByte and 0x0F
 
         return when (type) {
-            // PreKey messages are the first inbound message of a session:
-            // libsignal needs to know whether we expect a post-quantum
-            // ratchet negotiation. We default to ON because PQXDH is the
-            // current Signal Protocol baseline — flipping to YES matches
-            // what Signal's official clients use today.
-            CiphertextMessage.PREKEY_TYPE -> cipher.decrypt(
-                PreKeySignalMessage(ciphertext),
-                UsePqRatchet.YES,
-            )
+            // libsignal-android 0.86+ collapsed the
+            // SessionCipher.decrypt(PreKeySignalMessage, UsePqRatchet)
+            // overload back into the single-arg form — PQXDH ratchet
+            // negotiation is now driven implicitly by the bundle's
+            // kyber pre-key presence rather than an explicit toggle.
+            CiphertextMessage.PREKEY_TYPE -> cipher.decrypt(PreKeySignalMessage(ciphertext))
             CiphertextMessage.WHISPER_TYPE -> cipher.decrypt(SignalMessage(ciphertext))
             else -> error("Unsupported Signal ciphertext type: $type")
         }

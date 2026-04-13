@@ -42,14 +42,24 @@ val okaiwaVersionCode: Int = runCatching {
 }.getOrElse { 1 }
 val okaiwaVersionName = "$okaiwaMajor.$okaiwaMinor.$okaiwaVersionCode"
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.addAll(
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+        )
+    }
+}
+
 android {
     namespace = "io.okaiwa"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.okaiwa.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = okaiwaVersionCode
         versionName = okaiwaVersionName
 
@@ -88,13 +98,9 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-        )
-    }
+    // Kotlin 2.3 removed the legacy `kotlinOptions` DSL; the
+    // configuration now lives on the `kotlin { compilerOptions { … } }`
+    // top-level extension instead. Same JVM target, same opt-ins.
 
     buildFeatures {
         compose = true

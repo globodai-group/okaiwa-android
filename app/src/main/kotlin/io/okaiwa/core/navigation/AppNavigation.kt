@@ -25,6 +25,7 @@ import io.okaiwa.features.auth.presentation.screens.SplashScreen
 import io.okaiwa.features.auth.presentation.screens.WelcomeScreen
 import io.okaiwa.features.auth.presentation.viewmodels.OtpVerificationViewModel
 import io.okaiwa.features.auth.presentation.viewmodels.PhoneEntryViewModel
+import io.okaiwa.features.profile.presentation.ProfileSetupScreen
 import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
 import io.okaiwa.features.chat.presentation.screens.NewMessageScreen
@@ -60,6 +61,9 @@ sealed class Screen(val route: String) {
     // Main bottom-tab host
     data object Main : Screen("main")
 
+    /** Post-OTP "Pick your username + display name" — required once. */
+    data object ProfileSetup : Screen("profile_setup")
+
     // Stacked destinations pushed on top of the main scaffold.
     data object Chat : Screen("chat/{conversationId}") {
         fun createRoute(conversationId: String): String = "chat/$conversationId"
@@ -89,8 +93,18 @@ fun AppNavigation(
         modifier = modifier,
     ) {
         composable(Screen.Splash.route) {
+            // Read the persisted session ONCE at splash time so the
+            // entry route reflects whether the user is already
+            // authenticated. Logic is centralized in SessionGateViewModel
+            // so the routing matrix has a single source of truth.
+            val gate: SessionGateViewModel = hiltViewModel()
             SplashScreen(onFinished = {
-                navController.navigate(Screen.Welcome.route) {
+                val target = when {
+                    gate.session?.isVerified != true -> Screen.Welcome.route
+                    !gate.session.profileSetupDone -> Screen.ProfileSetup.route
+                    else -> Screen.Main.route
+                }
+                navController.navigate(target) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }
             })
@@ -182,7 +196,12 @@ fun AppNavigation(
 
             LaunchedEffect(otpState.verified) {
                 if (otpState.verified) {
-                    navController.navigate(Screen.Main.route) {
+                    // Fresh verify always lands on ProfileSetup — the
+                    // user picks a username + optional displayName/bio
+                    // before reaching the main scaffold. Skip option
+                    // marks the session flag so subsequent launches
+                    // bypass this step entirely.
+                    navController.navigate(Screen.ProfileSetup.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 }
@@ -199,6 +218,14 @@ fun AppNavigation(
         }
 
         // Main bottom-tab host
+        composable(Screen.ProfileSetup.route) {
+            ProfileSetupScreen(onDone = {
+                navController.navigate(Screen.Main.route) {
+                    popUpTo(Screen.Welcome.route) { inclusive = true }
+                }
+            })
+        }
+
         composable(Screen.Main.route) {
             MainScaffold { tab ->
                 when (tab) {

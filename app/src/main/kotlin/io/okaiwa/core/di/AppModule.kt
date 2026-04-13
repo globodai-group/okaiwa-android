@@ -97,6 +97,13 @@ object AppModule {
         retrofit: Retrofit,
     ): io.okaiwa.features.discovery.data.remote.DiscoveryApi =
         retrofit.create(io.okaiwa.features.discovery.data.remote.DiscoveryApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideProfileApi(
+        retrofit: Retrofit,
+    ): io.okaiwa.features.profile.data.remote.ProfileApi =
+        retrofit.create(io.okaiwa.features.profile.data.remote.ProfileApi::class.java)
 }
 
 /**
