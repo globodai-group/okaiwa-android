@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.okaiwa.core.config.AppConfig
+import io.okaiwa.features.auth.data.remote.AuthApi
 import io.okaiwa.features.auth.domain.repositories.AuthRepository
 import io.okaiwa.features.chat.domain.repositories.ChatRepository
 import io.okaiwa.features.wallet.domain.repositories.WalletRepository
@@ -85,6 +86,10 @@ object AppModule {
             json.asConverterFactory("application/json; charset=UTF-8".toMediaType())
         )
         .build()
+
+    @Provides
+    @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
 }
 
 /**
@@ -97,10 +102,13 @@ object AppModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+    // Swapped to the live implementation — calls the identity service
+    // at AppConfig.environment.apiBaseUrl. StubAuthRepository is kept
+    // around as a reference and for offline unit tests only.
     @dagger.Binds
     @Singleton
     abstract fun bindAuthRepository(
-        impl: io.okaiwa.features.auth.data.repositories.StubAuthRepository
+        impl: io.okaiwa.features.auth.data.repositories.RemoteAuthRepository
     ): AuthRepository
 
     // Wired to the mock while the relay service + Signal Protocol FFI

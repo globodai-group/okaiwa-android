@@ -147,6 +147,9 @@ dependencies {
     // Biometric
     implementation(libs.biometric)
 
+    // Encrypted session token storage
+    implementation(libs.security.crypto)
+
     // Firebase (silent push)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)

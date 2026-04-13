@@ -1,11 +1,14 @@
 package io.okaiwa.core.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -20,6 +23,8 @@ import io.okaiwa.features.auth.presentation.screens.PhoneEntryMode
 import io.okaiwa.features.auth.presentation.screens.PhoneNumberScreen
 import io.okaiwa.features.auth.presentation.screens.SplashScreen
 import io.okaiwa.features.auth.presentation.screens.WelcomeScreen
+import io.okaiwa.features.auth.presentation.viewmodels.OtpVerificationViewModel
+import io.okaiwa.features.auth.presentation.viewmodels.PhoneEntryViewModel
 import io.okaiwa.features.chat.presentation.screens.ChatScreen
 import io.okaiwa.features.chat.presentation.screens.ConversationListScreen
 import io.okaiwa.features.chat.presentation.screens.NewMessageScreen
@@ -109,6 +114,20 @@ fun AppNavigation(
             val modeName = backStackEntry.arguments?.getString("mode") ?: PhoneEntryMode.Register.name
             val mode = runCatching { PhoneEntryMode.valueOf(modeName) }.getOrDefault(PhoneEntryMode.Register)
 
+            val phoneVm: PhoneEntryViewModel = hiltViewModel()
+            val phoneState by phoneVm.state.collectAsState()
+
+            // The repository registers with the identity service as soon
+            // as the user taps "Continuer" — the OTP screen is only
+            // reached once that call succeeds, and the phone is already
+            // stashed in the SessionStore so OTP verify can re-submit
+            // the matching hash without asking for the number again.
+            LaunchedEffect(phoneState.registeredPhoneE164) {
+                val number = phoneState.registeredPhoneE164 ?: return@LaunchedEffect
+                phoneVm.onNavigated()
+                navController.navigate(Screen.OtpVerification.createRoute(number))
+            }
+
             PhoneNumberScreen(
                 mode = mode,
                 selectedCountry = selectedCountry,
@@ -118,8 +137,10 @@ fun AppNavigation(
                 },
                 onContinue = { country, nationalNumber, _ ->
                     val fullNumber = "${country.dialCode}$nationalNumber"
-                    navController.navigate(Screen.OtpVerification.createRoute(fullNumber))
+                    phoneVm.submitPhone(fullNumber)
                 },
+                isLoading = phoneState.isLoading,
+                errorMessage = phoneState.error,
             )
         }
 
@@ -141,15 +162,25 @@ fun AppNavigation(
                 backStackEntry.arguments?.getString("phone") ?: "",
                 "UTF-8",
             )
-            OtpVerificationScreen(
-                phoneNumberDisplay = phone,
-                onBack = { navController.popBackStack() },
-                onSubmit = {
+
+            val otpVm: OtpVerificationViewModel = hiltViewModel()
+            val otpState by otpVm.state.collectAsState()
+
+            LaunchedEffect(otpState.verified) {
+                if (otpState.verified) {
                     navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
-                },
+                }
+            }
+
+            OtpVerificationScreen(
+                phoneNumberDisplay = phone,
+                onBack = { navController.popBackStack() },
+                onSubmit = { code -> otpVm.submit(code) },
                 onResend = { /* TODO: call authRepository.requestOtp again */ },
+                isLoading = otpState.isLoading,
+                errorMessage = otpState.error,
             )
         }
 

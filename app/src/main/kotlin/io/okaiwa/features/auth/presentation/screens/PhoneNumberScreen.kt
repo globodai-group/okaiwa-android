@@ -76,6 +76,7 @@ fun PhoneNumberScreen(
     onPickCountry: () -> Unit,
     selectedCountry: Country = Countries.default,
     isLoading: Boolean = false,
+    errorMessage: String? = null,
 ) {
     var phoneDigits by rememberSaveable { mutableStateOf("") }
     var syncContacts by rememberSaveable { mutableStateOf(true) }
@@ -166,6 +167,16 @@ fun PhoneNumberScreen(
                     checked = syncContacts,
                     onCheckedChange = { syncContacts = it },
                 )
+
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        color = OkaiwaColors.Error,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
