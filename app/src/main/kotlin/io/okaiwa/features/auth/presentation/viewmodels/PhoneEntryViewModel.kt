@@ -3,7 +3,10 @@ package io.okaiwa.features.auth.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.okaiwa.core.errors.AppError
+import io.okaiwa.features.auth.domain.usecases.LoginUserUseCase
 import io.okaiwa.features.auth.domain.usecases.RegisterUserUseCase
+import io.okaiwa.features.auth.presentation.screens.PhoneEntryMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,34 +30,53 @@ import javax.inject.Inject
 @HiltViewModel
 class PhoneEntryViewModel @Inject constructor(
     private val registerUserUseCase: RegisterUserUseCase,
+    private val loginUserUseCase: LoginUserUseCase,
 ) : ViewModel() {
 
     data class UiState(
         val isLoading: Boolean = false,
         val error: String? = null,
-        val registeredPhoneE164: String? = null,
+        /** Set when the server acknowledged a Register/Login request and the OTP screen should open. */
+        val acknowledgedPhoneE164: String? = null,
+        /**
+         * Set when the user typed a phone in Login mode but no Okaiwa
+         * account exists for it. The screen renders a friendly French
+         * CTA ("Créer un compte avec ce numéro") that flips the flow
+         * to Register and re-submits the same number.
+         */
+        val accountNotFoundForLogin: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
-    fun submitPhone(phoneE164: String) {
+    fun submitPhone(phoneE164: String, mode: PhoneEntryMode) {
         if (_state.value.isLoading) return
         _state.value = UiState(isLoading = true)
 
         viewModelScope.launch {
-            registerUserUseCase(phoneE164)
+            val useCase: suspend (String) -> Result<String> = when (mode) {
+                PhoneEntryMode.Register -> { p -> registerUserUseCase(p) }
+                PhoneEntryMode.Login -> { p -> loginUserUseCase(p) }
+            }
+
+            useCase(phoneE164)
                 .onSuccess {
-                    _state.value = UiState(registeredPhoneE164 = phoneE164)
+                    _state.value = UiState(acknowledgedPhoneE164 = phoneE164)
                 }
                 .onFailure { t ->
-                    _state.value = UiState(error = t.message ?: "Échec de l'inscription")
+                    _state.value = when (t) {
+                        is AppError.Auth.AccountNotFound ->
+                            UiState(accountNotFoundForLogin = true)
+                        else ->
+                            UiState(error = t.message ?: "Échec de la requête")
+                    }
                 }
         }
     }
 
     fun clearError() {
-        _state.value = _state.value.copy(error = null)
+        _state.value = _state.value.copy(error = null, accountNotFoundForLogin = false)
     }
 
     /** Called after the Navigation layer has consumed the registered event. */

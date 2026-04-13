@@ -48,6 +48,27 @@ class RegisterUserUseCase @Inject constructor(
 }
 
 /**
+ * Login path — mirror of [RegisterUserUseCase] that calls
+ * `authRepository.requestLoginOtp` instead. The only observable
+ * difference for the caller is that [AppError.Auth.AccountNotFound]
+ * is thrown when the phone is unknown, instead of the account being
+ * silently created.
+ */
+class LoginUserUseCase @Inject constructor(
+    private val authRepository: AuthRepository,
+) {
+    suspend operator fun invoke(phoneNumber: String): Result<String> = runCatching {
+        val sanitized = phoneNumber.filter { it.isDigit() || it == '+' }
+        if (!sanitized.matches(Regex("^\\+[1-9]\\d{6,14}$"))) {
+            throw AppError.Auth.InvalidCredentials(
+                "Invalid phone number format. Expected E.164 (e.g., +33612345678)."
+            )
+        }
+        authRepository.requestLoginOtp(sanitized)
+    }
+}
+
+/**
  * Use case for OTP verification and registration completion.
  */
 class VerifyOtpUseCase @Inject constructor(

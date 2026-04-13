@@ -86,6 +86,15 @@ sealed class AppError(
         data class RegistrationFailed(val reason: String) :
             Auth("Registration failed: $reason")
 
+        /**
+         * Login attempted with a phone number that has no matching
+         * account on the identity service — the caller should route
+         * the user to the register flow instead. Mapped from the
+         * backend's 404 on POST /v1/auth/login.
+         */
+        data object AccountNotFound :
+            Auth("No Okaiwa account for this phone")
+
         data class KeystoreUnavailable(override val cause: Throwable? = null) :
             Auth("Android Keystore is unavailable", cause)
     }

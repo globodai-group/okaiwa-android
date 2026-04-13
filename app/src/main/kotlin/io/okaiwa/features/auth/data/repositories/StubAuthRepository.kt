@@ -26,6 +26,10 @@ class StubAuthRepository @Inject constructor() : AuthRepository {
         return "stub-session-token"
     }
 
+    override suspend fun requestLoginOtp(phoneNumber: String): String {
+        return "stub-session-token"
+    }
+
     override suspend fun verifyOtp(sessionToken: String, otpCode: String): User {
         throw NotImplementedError("Auth backend not yet wired — UX test build only")
     }

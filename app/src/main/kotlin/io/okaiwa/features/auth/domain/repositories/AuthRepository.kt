@@ -28,6 +28,19 @@ interface AuthRepository {
     suspend fun requestOtp(phoneNumber: String): String
 
     /**
+     * Login path — symmetric to [requestOtp] but only succeeds when
+     * the phone is already registered. Implementations call
+     * `POST /v1/auth/login` and throw [io.okaiwa.core.errors.AppError.Auth.AccountNotFound]
+     * on 404 so the UI can surface "no account yet — create one"
+     * instead of silently registering the user.
+     *
+     * @param phoneNumber E.164 formatted phone number.
+     * @return Account ID of the existing account (the OTP is delivered
+     *         out-of-band by the backend).
+     */
+    suspend fun requestLoginOtp(phoneNumber: String): String
+
+    /**
      * Verify the OTP code and complete registration.
      * Generates Signal Protocol key bundles and uploads pre-keys.
      *

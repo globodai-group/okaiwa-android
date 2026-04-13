@@ -5,6 +5,7 @@ import io.okaiwa.core.errors.toAppError
 import io.okaiwa.features.auth.data.crypto.PhoneHasher
 import io.okaiwa.features.auth.data.crypto.SignalIdentityKeys
 import io.okaiwa.features.auth.data.remote.AuthApi
+import io.okaiwa.features.auth.data.remote.LoginRequest
 import io.okaiwa.features.auth.data.remote.RefreshRequest
 import io.okaiwa.features.auth.data.remote.RegisterRequest
 import io.okaiwa.features.auth.data.remote.SessionTokenResponse
@@ -113,6 +114,37 @@ class RemoteAuthRepository @Inject constructor(
             deviceId = body.deviceId ?: pending.deviceId,
             deviceToken = body.deviceToken ?: "",
         ).toUserStub()
+    }
+
+    /**
+     * Login path. Hashes the phone and calls `/v1/auth/login` so the
+     * backend can answer 404 on an unknown phone — the UI uses that
+     * signal to push the user to the register flow instead of silently
+     * creating a new account. On success we stash the accountId +
+     * phoneHash into the session store so the upcoming `verify` call
+     * can re-use the same phoneHash.
+     */
+    override suspend fun requestLoginOtp(phoneNumber: String): String {
+        val phoneHash = PhoneHasher.hashE164(phoneNumber)
+        val response = api.login(LoginRequest(phoneHash = phoneHash))
+
+        if (response.code() == 404) {
+            throw AppError.Auth.AccountNotFound
+        }
+        val body = response.requireBody { "login" }
+
+        sessionStore.save(
+            Session(
+                accountId = body.accountId,
+                phoneHash = phoneHash,
+                accessToken = "",
+                refreshToken = "",
+                expiresAtEpochSeconds = 0L,
+                deviceId = "",
+                deviceToken = "",
+            )
+        )
+        return body.accountId
     }
 
     override suspend fun registerDevice(phoneNumber: String): User {

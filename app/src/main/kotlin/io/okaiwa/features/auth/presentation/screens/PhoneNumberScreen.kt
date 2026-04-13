@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,6 +79,14 @@ fun PhoneNumberScreen(
     selectedCountry: Country = Countries.default,
     isLoading: Boolean = false,
     errorMessage: String? = null,
+    /**
+     * Login-only surface: when the user typed a phone that has no
+     * Okaiwa account, the screen shows a friendly French CTA instead
+     * of a technical error. Tapping it flips the flow to Register
+     * for the same number without retyping.
+     */
+    accountNotFoundForLogin: Boolean = false,
+    onCreateAccountFromLogin: () -> Unit = {},
 ) {
     var phoneDigits by rememberSaveable { mutableStateOf("") }
     var syncContacts by rememberSaveable { mutableStateOf(true) }
@@ -176,6 +186,58 @@ fun PhoneNumberScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+
+                if (accountNotFoundForLogin) {
+                    // Friendly, French-first fallback when Login mode
+                    // hits a 404. The CTA flips to Register with the
+                    // same phone number, so the user keeps their
+                    // momentum instead of being bounced back to the
+                    // welcome screen.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = OkaiwaColors.Lime.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(14.dp),
+                            )
+                            .background(
+                                color = OkaiwaColors.Lime.copy(alpha = 0.08f),
+                                shape = RoundedCornerShape(14.dp),
+                            )
+                            .padding(16.dp),
+                    ) {
+                        Text(
+                            text = "Aucun compte Okaiwa avec ce numéro.",
+                            color = OkaiwaColors.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Vous n'êtes pas encore inscrit. Vous pouvez créer un compte avec ce numéro en un seul geste.",
+                            color = OkaiwaColors.WhiteDim,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = onCreateAccountFromLogin,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OkaiwaColors.Lime,
+                                contentColor = OkaiwaColors.Black,
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = "Créer un compte avec ce numéro",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
                 }
             }
         }

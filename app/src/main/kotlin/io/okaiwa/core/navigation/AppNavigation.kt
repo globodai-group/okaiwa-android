@@ -116,14 +116,15 @@ fun AppNavigation(
 
             val phoneVm: PhoneEntryViewModel = hiltViewModel()
             val phoneState by phoneVm.state.collectAsState()
+            var pendingPhoneE164 by rememberSaveable { mutableStateOf("") }
 
-            // The repository registers with the identity service as soon
-            // as the user taps "Continuer" — the OTP screen is only
-            // reached once that call succeeds, and the phone is already
-            // stashed in the SessionStore so OTP verify can re-submit
-            // the matching hash without asking for the number again.
-            LaunchedEffect(phoneState.registeredPhoneE164) {
-                val number = phoneState.registeredPhoneE164 ?: return@LaunchedEffect
+            // The repository hits the identity service as soon as the
+            // user taps "Continuer" — the OTP screen is only reached
+            // once that call succeeds, and the phone is already stashed
+            // in the SessionStore so OTP verify can re-submit the
+            // matching hash without asking for the number again.
+            LaunchedEffect(phoneState.acknowledgedPhoneE164) {
+                val number = phoneState.acknowledgedPhoneE164 ?: return@LaunchedEffect
                 phoneVm.onNavigated()
                 navController.navigate(Screen.OtpVerification.createRoute(number))
             }
@@ -137,10 +138,23 @@ fun AppNavigation(
                 },
                 onContinue = { country, nationalNumber, _ ->
                     val fullNumber = "${country.dialCode}$nationalNumber"
-                    phoneVm.submitPhone(fullNumber)
+                    pendingPhoneE164 = fullNumber
+                    phoneVm.submitPhone(fullNumber, mode)
                 },
                 isLoading = phoneState.isLoading,
                 errorMessage = phoneState.error,
+                // Login-only: when the backend returns 404 on
+                // /v1/auth/login we flip the compose flow to Register
+                // with the same number instead of asking the user to
+                // re-type it. The phoneVm clears its error state after
+                // we consume it.
+                accountNotFoundForLogin = phoneState.accountNotFoundForLogin,
+                onCreateAccountFromLogin = {
+                    phoneVm.clearError()
+                    if (pendingPhoneE164.isNotEmpty()) {
+                        phoneVm.submitPhone(pendingPhoneE164, PhoneEntryMode.Register)
+                    }
+                },
             )
         }
 
