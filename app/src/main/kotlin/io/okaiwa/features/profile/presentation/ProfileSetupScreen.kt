@@ -179,9 +179,14 @@ private fun UsernameField(value: String, onValueChange: (String) -> Unit, isVali
     OutlinedTextField(
         value = value,
         onValueChange = { newValue ->
-            // Live-strip non-allowed characters so the regex never sees
-            // them; the visible field stays in [a-zA-Z0-9_].
-            val cleaned = newValue.filter { it.isLetterOrDigit() || it == '_' }
+            // Live-strip non-allowed characters. Must be ASCII-only —
+            // `isLetterOrDigit()` accepts Unicode letters/digits (é,
+            // 漢, ٣ …) which would pass the live filter but FAIL the
+            // server's `^[a-zA-Z0-9_]+$` regex, leaving the user
+            // staring at characters that mysteriously block submit.
+            val cleaned = newValue.filter { c ->
+                (c in 'a'..'z') || (c in 'A'..'Z') || (c in '0'..'9') || c == '_'
+            }
             onValueChange(cleaned)
         },
         modifier = Modifier.fillMaxWidth(),

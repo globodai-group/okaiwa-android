@@ -32,6 +32,10 @@ class MockProfileRepository @Inject constructor() : ProfileRepository {
 
     override fun observeProfile(): Flow<UserProfile?> = state.asStateFlow()
 
+    override suspend fun refresh() {
+        // Mock holds the canonical state in-memory — nothing to fetch.
+    }
+
     override suspend fun setDisplayName(newName: String) {
         state.update { it?.copy(displayName = newName) }
     }

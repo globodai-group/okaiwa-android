@@ -149,9 +149,14 @@ abstract class RepositoryModule {
         impl: io.okaiwa.features.contacts.data.repositories.AndroidDeviceContactsRepository
     ): io.okaiwa.features.contacts.domain.repositories.DeviceContactsRepository
 
+    // Swapped to the live impl on okaiwa-server@6104c57: the Profile
+    // tab now renders whatever PUT /v1/profile last persisted instead
+    // of the placeholder Kevin / @asmista / Globodai bio the mock
+    // surfaced. MockProfileRepository is kept around for offline unit
+    // tests only.
     @dagger.Binds
     @Singleton
     abstract fun bindProfileRepository(
-        impl: io.okaiwa.features.profile.data.repositories.MockProfileRepository
+        impl: io.okaiwa.features.profile.data.repositories.RemoteProfileRepository
     ): io.okaiwa.features.profile.domain.repositories.ProfileRepository
 }

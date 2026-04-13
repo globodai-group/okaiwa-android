@@ -3,23 +3,37 @@ package io.okaiwa.features.profile.data.remote
 import kotlinx.serialization.Serializable
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PUT
 
 /**
  * Retrofit definition for the identity service profile endpoints.
  *
- * Authentication: the server currently reads `x-account-id` from the
- * request header instead of validating a session token — the auth
- * middleware + sessions table land with the next migration. Until then
- * the mobile client passes the stashed accountId explicitly.
+ * Auth: every authenticated route requires `Authorization: Bearer
+ * <accessToken>`. The token is the HMAC-signed value minted by
+ * `POST /v1/auth/verify` (`{accountId}.{timestamp}.{hmac}`); the
+ * server-side SessionAuthMiddleware verifies the signature and
+ * derives accountId server-side, so the client never needs to send
+ * accountId in a header (which would be a forgeable bypass — see
+ * security review on android@386d11d).
  */
 interface ProfileApi {
     @PUT("profile")
     suspend fun updateProfile(
-        @Header("x-account-id") accountId: String,
+        @Header("Authorization") bearer: String,
         @Body body: UpdateProfileRequest,
     ): Response<UpdateProfileResponse>
+
+    /**
+     * Fetch the authenticated caller's own profile. Returns even
+     * private fields and the full exposedWalletAddresses regardless
+     * of visibility — the caller IS the owner.
+     */
+    @GET("profile/me")
+    suspend fun getMyProfile(
+        @Header("Authorization") bearer: String,
+    ): Response<MyProfileResponse>
 }
 
 /**
@@ -57,4 +71,13 @@ data class UpdatedProfile(
     val avatarUrl: String? = null,
     val visibility: String? = null,
     val exposedWalletAddresses: List<String>? = null,
+)
+
+/** Body of GET /v1/profile/me. */
+@Serializable
+data class MyProfileResponse(
+    val accountId: String,
+    val username: String? = null,
+    val identityPublicKey: String? = null,
+    val profile: UpdatedProfile? = null,
 )

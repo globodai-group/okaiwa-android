@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.okaiwa.features.auth.data.session.SessionStore
 import io.okaiwa.features.profile.data.remote.ProfileApi
 import io.okaiwa.features.profile.data.remote.UpdateProfileRequest
+import io.okaiwa.features.profile.domain.repositories.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,7 @@ import javax.inject.Inject
 class ProfileSetupViewModel @Inject constructor(
     private val profileApi: ProfileApi,
     private val sessionStore: SessionStore,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel() {
 
     data class UiState(
@@ -54,8 +56,9 @@ class ProfileSetupViewModel @Inject constructor(
     fun submit() {
         val s = _state.value
         if (!s.isSubmitEnabled) return
-        val accountId = sessionStore.current()?.accountId
-        if (accountId.isNullOrEmpty()) {
+        val session = sessionStore.current()
+        val accessToken = session?.accessToken
+        if (session == null || accessToken.isNullOrEmpty()) {
             _state.value = s.copy(error = "Session expirée — reconnectez-vous.")
             return
         }
@@ -64,7 +67,7 @@ class ProfileSetupViewModel @Inject constructor(
         viewModelScope.launch {
             val result = runCatching {
                 profileApi.updateProfile(
-                    accountId = accountId,
+                    bearer = "Bearer $accessToken",
                     body = UpdateProfileRequest(
                         username = s.username,
                         displayName = s.displayName.takeIf { it.isNotBlank() },
@@ -77,16 +80,30 @@ class ProfileSetupViewModel @Inject constructor(
                     _state.value = when {
                         response.code() == 409 ->
                             _state.value.copy(isSubmitting = false, error = "Ce nom d'utilisateur est déjà pris.")
+                        response.code() == 401 ->
+                            _state.value.copy(isSubmitting = false, error = "Session expirée — reconnectez-vous.")
                         response.isSuccessful -> {
                             sessionStore.markProfileSetupDone()
+                            // Hot-cache the canonical server state so
+                            // the Profile tab renders the just-saved
+                            // values immediately on first selection,
+                            // not the empty Mock fallback.
+                            runCatching { profileRepository.refresh() }
                             _state.value.copy(isSubmitting = false, done = true)
                         }
                         else ->
-                            _state.value.copy(isSubmitting = false, error = "Erreur ${response.code()}")
+                            // Generic copy — never surface raw server body to the user.
+                            _state.value.copy(isSubmitting = false, error = "Une erreur est survenue, réessayez.")
                     }
                 }
-                .onFailure { t ->
-                    _state.value = _state.value.copy(isSubmitting = false, error = t.message ?: "Erreur réseau")
+                .onFailure { _ ->
+                    // Same generic line on any transport failure — the
+                    // raw exception message can include URL fragments
+                    // and stack traces that have no place in a UI toast.
+                    _state.value = _state.value.copy(
+                        isSubmitting = false,
+                        error = "Connexion impossible. Vérifiez votre réseau."
+                    )
                 }
         }
     }

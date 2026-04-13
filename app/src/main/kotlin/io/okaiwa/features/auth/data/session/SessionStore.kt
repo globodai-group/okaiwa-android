@@ -2,12 +2,15 @@ package io.okaiwa.features.auth.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -60,15 +63,36 @@ class SessionStore @Inject constructor(
     fun current(): Session? = _sessionFlow.value
 
     fun save(session: Session) {
-        prefs.edit()
-            .putString(KEY_ACCESS, session.accessToken)
-            .putString(KEY_REFRESH, session.refreshToken)
-            .putLong(KEY_EXPIRES_AT, session.expiresAtEpochSeconds)
-            .putString(KEY_ACCOUNT_ID, session.accountId)
-            .putString(KEY_DEVICE_ID, session.deviceId)
-            .putString(KEY_DEVICE_TOKEN, session.deviceToken)
-            .putBoolean(KEY_PROFILE_DONE, session.profileSetupDone)
-            .apply()
+        // Atomic write: serialize the whole record to one JSON blob and
+        // persist under a single key. The previous multi-key putString
+        // pattern was non-atomic — a process kill or Keychain failure
+        // mid-`apply()` could leave a half-written record where
+        // accessToken was set but deviceToken was not, which made the
+        // splash gate route to Welcome while the stale tokens remained
+        // on disk indefinitely (security review on android@386d11d).
+        // Single-key write inherits SharedPreferences' all-or-nothing
+        // guarantee on the underlying file replacement.
+        val persisted = PersistedSession(
+            schemaVersion = SCHEMA_VERSION,
+            accountId = session.accountId,
+            accessToken = session.accessToken,
+            refreshToken = session.refreshToken,
+            expiresAtEpochSeconds = session.expiresAtEpochSeconds,
+            deviceId = session.deviceId,
+            deviceToken = session.deviceToken,
+            profileSetupDone = session.profileSetupDone,
+        )
+        val ok = prefs.edit()
+            .putString(KEY_SESSION_BLOB, json.encodeToString(PersistedSession.serializer(), persisted))
+            .commit() // synchronous so a caller observing the result knows the write landed.
+        if (!ok) {
+            // Persistence failed — DO NOT update the in-memory flow.
+            // The user's next interaction will see the old session and
+            // we'll surface a "session expired" path naturally on the
+            // next API call.
+            Log.e(TAG, "Failed to persist session — disk write returned false")
+            return
+        }
         _sessionFlow.value = session
     }
 
@@ -83,45 +107,72 @@ class SessionStore @Inject constructor(
     }
 
     fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit().clear().commit()
         _sessionFlow.value = null
     }
 
     private fun loadFromDisk(): Session? {
-        val access = prefs.getString(KEY_ACCESS, null) ?: return null
-        val refresh = prefs.getString(KEY_REFRESH, null) ?: return null
-        val accountId = prefs.getString(KEY_ACCOUNT_ID, null) ?: return null
-        val deviceId = prefs.getString(KEY_DEVICE_ID, "") ?: ""
-        val deviceToken = prefs.getString(KEY_DEVICE_TOKEN, "") ?: ""
-        val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
-        val profileDone = prefs.getBoolean(KEY_PROFILE_DONE, false)
-        // phoneHash is intentionally not restored from disk — see the
-        // class kdoc. The session is hydrated without it; the verify
-        // step will fail until the user re-enters the phone, which
-        // calls register() again and refreshes the in-memory hash.
+        val raw = prefs.getString(KEY_SESSION_BLOB, null) ?: return null
+        val persisted = runCatching {
+            json.decodeFromString(PersistedSession.serializer(), raw)
+        }.getOrNull()
+
+        if (persisted == null || persisted.schemaVersion != SCHEMA_VERSION) {
+            // Schema mismatch or corrupted blob — wipe and force a
+            // clean slate. Better to make the user re-authenticate
+            // than to ship them into a half-hydrated state where
+            // some fields are missing and produce subtle bugs.
+            prefs.edit().clear().commit()
+            return null
+        }
+
+        // phoneHash is intentionally not restored — see the class kdoc.
+        // The session is hydrated without it; verify will fail until
+        // the user re-enters the phone, which calls register() again
+        // and refreshes the in-memory hash.
         return Session(
-            accountId = accountId,
+            accountId = persisted.accountId,
             phoneHash = "",
-            accessToken = access,
-            refreshToken = refresh,
-            expiresAtEpochSeconds = expiresAt,
-            deviceId = deviceId,
-            deviceToken = deviceToken,
-            profileSetupDone = profileDone,
+            accessToken = persisted.accessToken,
+            refreshToken = persisted.refreshToken,
+            expiresAtEpochSeconds = persisted.expiresAtEpochSeconds,
+            deviceId = persisted.deviceId,
+            deviceToken = persisted.deviceToken,
+            profileSetupDone = persisted.profileSetupDone,
         )
     }
 
     companion object {
+        private const val TAG = "SessionStore"
         private const val PREFS_FILE = "okaiwa_session"
-        private const val KEY_ACCESS = "access_token"
-        private const val KEY_REFRESH = "refresh_token"
-        private const val KEY_EXPIRES_AT = "expires_at_epoch_seconds"
-        private const val KEY_ACCOUNT_ID = "account_id"
-        private const val KEY_DEVICE_ID = "device_id"
-        private const val KEY_DEVICE_TOKEN = "device_token"
-        private const val KEY_PROFILE_DONE = "profile_setup_done"
+        private const val KEY_SESSION_BLOB = "session_v1"
+        /** Bump when the PersistedSession shape changes incompatibly. */
+        private const val SCHEMA_VERSION = 1
+
+        private val json = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
     }
 }
+
+/**
+ * Wire-format struct persisted in EncryptedSharedPreferences. Kept
+ * separate from the in-memory [Session] so we can include a schema
+ * version tag (for safe future migrations) and explicitly EXCLUDE the
+ * phoneHash from disk.
+ */
+@Serializable
+private data class PersistedSession(
+    val schemaVersion: Int,
+    val accountId: String,
+    val accessToken: String,
+    val refreshToken: String,
+    val expiresAtEpochSeconds: Long,
+    val deviceId: String,
+    val deviceToken: String,
+    val profileSetupDone: Boolean,
+)
 
 /**
  * Minimal on-device session record. The `accountId` is returned by the
