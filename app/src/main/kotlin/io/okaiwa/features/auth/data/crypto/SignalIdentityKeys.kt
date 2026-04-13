@@ -4,6 +4,9 @@ import android.util.Base64
 import io.okaiwa.features.auth.data.remote.SignedPreKeyDto
 import org.signal.libsignal.protocol.IdentityKeyPair
 import org.signal.libsignal.protocol.ecc.ECKeyPair
+import org.signal.libsignal.protocol.kem.KEMKeyPair
+import org.signal.libsignal.protocol.kem.KEMKeyType
+import org.signal.libsignal.protocol.state.KyberPreKeyRecord
 import org.signal.libsignal.protocol.state.PreKeyRecord
 import org.signal.libsignal.protocol.state.SignedPreKeyRecord
 import org.signal.libsignal.protocol.state.impl.InMemorySignalProtocolStore
@@ -53,8 +56,40 @@ class SignalIdentityKeys @Inject constructor(
         val registrationId: Int,
     )
 
+    /**
+     * Snapshot passed into the PreKey upload request — see
+     * [io.okaiwa.features.keys.data.remote.KeyApi.uploadPreKeys].
+     * The upload is gated on `preKeysUploaded` in [SignalIdentityStore],
+     * so subsequent launches don't burn the OPK pool.
+     */
+    data class UploadBatch(
+        /** Max 100 rows. `publicKey` is base64 of the PreKeyRecord's ECPublicKey. */
+        val oneTimePreKeys: List<PreKeyPublic>,
+        /** Signed pre-key already sent at register time — re-uploaded here
+         *  so the relay has a fresh record even for accounts that verified
+         *  against an older revision of /v1/auth/register. */
+        val signedPreKey: SignedPreKeyDto,
+        val kyberPreKey: KyberPreKeyDto,
+        val identityPublicKey: String,
+        val registrationId: Int,
+    )
+
+    data class PreKeyPublic(val keyId: Int, val publicKey: String)
+
+    /** Wire-shape for the Kyber (PQXDH) pre-key — base64 public + signature. */
+    data class KyberPreKeyDto(val keyId: Int, val publicKey: String, val signature: String)
+
     @Volatile
     private var cachedStore: InMemorySignalProtocolStore? = null
+
+    /**
+     * Expose the identity store so the chat layer can hand it to
+     * [org.signal.libsignal.protocol.SessionBuilder] /
+     * [org.signal.libsignal.protocol.SessionCipher]. The store lifecycle
+     * matches the app process — libsignal keeps its session/identity
+     * state here until we rotate the backing snapshot.
+     */
+    fun protocolStore(): InMemorySignalProtocolStore = loadOrGenerate()
 
     /**
      * Either rehydrate the persisted key material or generate a fresh set
@@ -81,9 +116,42 @@ class SignalIdentityKeys @Inject constructor(
                     val record = PreKeyRecord(raw)
                     rehydrated.storePreKey(record.id, record)
                 }
+                // Kyber pre-key is the PQXDH leg — hydrated from the same
+                // snapshot so peers fetching our bundle after a restart
+                // still encapsulate against a key we can decapsulate.
+                if (persisted.kyberPreKeyRecord != null && persisted.kyberPreKeyId > 0) {
+                    rehydrated.storeKyberPreKey(
+                        persisted.kyberPreKeyId,
+                        KyberPreKeyRecord(persisted.kyberPreKeyRecord),
+                    )
+                }
+            }.also { rehydrated ->
+                // Back-fill: accounts that were registered BEFORE the
+                // kyber plumbing landed won't have a kyber record. Mint
+                // one lazily and persist so the next PreKey upload has
+                // something to send.
+                //
+                // CRITICAL: when we back-fill, we ALSO reset the
+                // `preKeysUploaded` flag to false so the next call to
+                // RemoteAuthRepository.uploadPreKeysOnce (or the
+                // app-level warmup hook) actually pushes the kyber
+                // material to the server. Without this reset, peers
+                // fetching the pre-commit user's bundle get
+                // `kyberPreKey: null` → SessionBuilder.process throws
+                // → no message ever reaches them. The agent's review
+                // P0#5 caught this silent failure mode.
+                val backFilled = persisted.kyberPreKeyRecord == null
+                if (backFilled) {
+                    val kyberRecord = generateKyberPreKey(rehydrated.identityKeyPair)
+                    rehydrated.storeKyberPreKey(KYBER_PRE_KEY_INITIAL_ID, kyberRecord)
+                }
+                persistSnapshot(
+                    rehydrated,
+                    preKeysUploaded = if (backFilled) false else persisted.preKeysUploaded,
+                )
             }
         } else {
-            generateFreshStore().also { persistSnapshot(it) }
+            generateFreshStore().also { persistSnapshot(it, preKeysUploaded = false) }
         }
 
         cachedStore = store
@@ -159,17 +227,39 @@ class SignalIdentityKeys @Inject constructor(
             PreKeyRecord(id, ECKeyPair.generate())
         }
 
+        // Kyber (ML-KEM-1024) pre-key — the PQXDH leg libsignal 0.86+
+        // requires on every bundle. Signed by the identity key the same
+        // way the classic signed pre-key is.
+        val kyberRecord = generateKyberPreKey(identity)
+
         val store = InMemorySignalProtocolStore(identity, registrationId)
         store.storeSignedPreKey(signedPreKeyId, signedPreKeyRecord)
         oneTimePreKeys.forEach { record -> store.storePreKey(record.id, record) }
+        store.storeKyberPreKey(KYBER_PRE_KEY_INITIAL_ID, kyberRecord)
         return store
     }
 
-    private fun persistSnapshot(store: InMemorySignalProtocolStore) {
+    private fun generateKyberPreKey(identity: IdentityKeyPair): KyberPreKeyRecord {
+        val kyberPair = KEMKeyPair.generate(KEMKeyType.KYBER_1024)
+        val signature = identity.privateKey.calculateSignature(
+            kyberPair.publicKey.serialize()
+        )
+        return KyberPreKeyRecord(
+            KYBER_PRE_KEY_INITIAL_ID,
+            System.currentTimeMillis(),
+            kyberPair,
+            signature,
+        )
+    }
+
+    private fun persistSnapshot(store: InMemorySignalProtocolStore, preKeysUploaded: Boolean) {
         val signedPreKey = store.loadSignedPreKey(SIGNED_PRE_KEY_INITIAL_ID)
         val oneTimePreKeys = (1..ONE_TIME_PRE_KEY_COUNT).mapNotNull { id ->
             runCatching { store.loadPreKey(id).serialize() }.getOrNull()
         }
+        val kyberRecord = runCatching {
+            store.loadKyberPreKey(KYBER_PRE_KEY_INITIAL_ID)
+        }.getOrNull()
 
         identityStore.write(
             SignalIdentityStore.Snapshot(
@@ -178,9 +268,74 @@ class SignalIdentityKeys @Inject constructor(
                 signedPreKeyId = signedPreKey.id,
                 signedPreKeyRecord = signedPreKey.serialize(),
                 oneTimePreKeyRecords = oneTimePreKeys,
+                kyberPreKeyRecord = kyberRecord?.serialize(),
+                kyberPreKeyId = kyberRecord?.id ?: 0,
+                preKeysUploaded = preKeysUploaded,
             )
         )
     }
+
+    /**
+     * Build the payload for `POST /v1/keys/prekeys`. Called exactly once
+     * after OTP verify — gated by [SignalIdentityStore.Snapshot.preKeysUploaded].
+     */
+    fun uploadBatch(): UploadBatch {
+        val store = loadOrGenerate()
+        val snapshot = identityStore.read()
+            ?: error("Identity snapshot missing after loadOrGenerate()")
+        val signedPreKey = store.loadSignedPreKey(snapshot.signedPreKeyId)
+        val kyberRecord = snapshot.kyberPreKeyRecord?.let { KyberPreKeyRecord(it) }
+            ?: error("Kyber pre-key record missing — regenerate before upload")
+        val oneTimePublics: List<PreKeyPublic> = (1..ONE_TIME_PRE_KEY_COUNT).mapNotNull { id ->
+            runCatching {
+                val record = store.loadPreKey(id)
+                PreKeyPublic(
+                    keyId = record.id,
+                    publicKey = Base64.encodeToString(
+                        record.keyPair.publicKey.serialize(),
+                        Base64.NO_WRAP,
+                    ),
+                )
+            }.getOrNull()
+        }
+
+        return UploadBatch(
+            oneTimePreKeys = oneTimePublics,
+            signedPreKey = SignedPreKeyDto(
+                keyId = signedPreKey.id,
+                publicKey = Base64.encodeToString(
+                    signedPreKey.keyPair.publicKey.serialize(),
+                    Base64.NO_WRAP,
+                ),
+                signature = Base64.encodeToString(
+                    signedPreKey.signature,
+                    Base64.NO_WRAP,
+                ),
+            ),
+            kyberPreKey = KyberPreKeyDto(
+                keyId = kyberRecord.id,
+                publicKey = Base64.encodeToString(
+                    kyberRecord.keyPair.publicKey.serialize(),
+                    Base64.NO_WRAP,
+                ),
+                signature = Base64.encodeToString(
+                    kyberRecord.signature,
+                    Base64.NO_WRAP,
+                ),
+            ),
+            identityPublicKey = Base64.encodeToString(
+                store.identityKeyPair.publicKey.serialize(),
+                Base64.NO_WRAP,
+            ),
+            registrationId = store.localRegistrationId,
+        )
+    }
+
+    fun markPreKeysUploaded() {
+        identityStore.markPreKeysUploaded()
+    }
+
+    fun arePreKeysUploaded(): Boolean = identityStore.read()?.preKeysUploaded == true
 
     companion object {
         /** Size of the one-time pre-key pool generated at first launch. */
@@ -192,5 +347,12 @@ class SignalIdentityKeys @Inject constructor(
          * rotation job lands.
          */
         const val SIGNED_PRE_KEY_INITIAL_ID: Int = 1
+
+        /**
+         * Initial Kyber (PQXDH) pre-key id. Kyber keys rotate on a
+         * slower cadence (Signal production uses ~one per month) — bump
+         * this counter when the rotation job lands.
+         */
+        const val KYBER_PRE_KEY_INITIAL_ID: Int = 1
     }
 }

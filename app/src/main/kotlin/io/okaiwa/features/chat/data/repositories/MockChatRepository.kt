@@ -116,6 +116,10 @@ class MockChatRepository @Inject constructor() : ChatRepository {
         }
     }
 
+    override suspend fun createConversationFromDiscovery(
+        peer: io.okaiwa.features.discovery.data.remote.DiscoveredUser,
+    ): Conversation = createConversation(peer.accountId)
+
     override suspend fun createConversation(recipientUserId: String): Conversation {
         val now = System.currentTimeMillis()
         val conversation = Conversation(

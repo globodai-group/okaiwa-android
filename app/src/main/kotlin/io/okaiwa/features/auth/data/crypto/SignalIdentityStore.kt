@@ -44,6 +44,23 @@ class SignalIdentityStore @Inject constructor(
         val signedPreKeyId: Int,
         val signedPreKeyRecord: ByteArray,
         val oneTimePreKeyRecords: List<ByteArray>,
+        /**
+         * libsignal 0.86+ bundles are PQXDH-only — every PreKeyBundle
+         * must carry a Kyber (KEMPublicKey) pre-key. We persist the
+         * serialised KyberPreKeyRecord bytes so peers who fetch our
+         * bundle through the relay can encapsulate against the same
+         * public key after an app restart.
+         */
+        val kyberPreKeyRecord: ByteArray? = null,
+        val kyberPreKeyId: Int = 0,
+        /**
+         * Flag flipped true once the initial batch of one-time pre-keys +
+         * the signed pre-key have been uploaded to /v1/keys/prekeys. Used
+         * to keep the upload idempotent across re-launches of a verified
+         * account (we don't want to burn our OPK pool on every cold
+         * start just to re-upload the same batch).
+         */
+        val preKeysUploaded: Boolean = false,
     )
 
     private val prefs: SharedPreferences by lazy {
@@ -76,13 +93,23 @@ class SignalIdentityStore @Inject constructor(
             }
         }
 
+        val kyberRaw = prefs.getString(KEY_KYBER_PRE_KEY_RECORD, null)
+        val kyberId = prefs.getInt(KEY_KYBER_PRE_KEY_ID, 0)
+
         return Snapshot(
             identityKeyPair = Base64.decode(identity, Base64.NO_WRAP),
             registrationId = registrationId,
             signedPreKeyId = signedPreKeyId,
             signedPreKeyRecord = Base64.decode(signedPreKeyRecord, Base64.NO_WRAP),
             oneTimePreKeyRecords = oneTimePreKeys,
+            kyberPreKeyRecord = kyberRaw?.let { Base64.decode(it, Base64.NO_WRAP) },
+            kyberPreKeyId = kyberId,
+            preKeysUploaded = prefs.getBoolean(KEY_PRE_KEYS_UPLOADED, false),
         )
+    }
+
+    fun markPreKeysUploaded() {
+        prefs.edit().putBoolean(KEY_PRE_KEYS_UPLOADED, true).apply()
     }
 
     fun write(snapshot: Snapshot) {
@@ -98,6 +125,18 @@ class SignalIdentityStore @Inject constructor(
                 Base64.encodeToString(snapshot.signedPreKeyRecord, Base64.NO_WRAP),
             )
             .putInt(KEY_ONE_TIME_COUNT, snapshot.oneTimePreKeyRecords.size)
+            .putBoolean(KEY_PRE_KEYS_UPLOADED, snapshot.preKeysUploaded)
+
+        if (snapshot.kyberPreKeyRecord != null && snapshot.kyberPreKeyId > 0) {
+            editor.putString(
+                KEY_KYBER_PRE_KEY_RECORD,
+                Base64.encodeToString(snapshot.kyberPreKeyRecord, Base64.NO_WRAP),
+            )
+            editor.putInt(KEY_KYBER_PRE_KEY_ID, snapshot.kyberPreKeyId)
+        } else {
+            editor.remove(KEY_KYBER_PRE_KEY_RECORD)
+            editor.remove(KEY_KYBER_PRE_KEY_ID)
+        }
 
         // Clear any leftover one-time entries from a prior, larger pool
         // before writing the new batch — avoids zombie keys from stale runs.
@@ -129,5 +168,8 @@ class SignalIdentityStore @Inject constructor(
         private const val KEY_SIGNED_PRE_KEY_RECORD = "signed_pre_key_record"
         private const val KEY_ONE_TIME_COUNT = "one_time_count"
         private const val ONE_TIME_KEY_PREFIX = "one_time_"
+        private const val KEY_KYBER_PRE_KEY_RECORD = "kyber_pre_key_record"
+        private const val KEY_KYBER_PRE_KEY_ID = "kyber_pre_key_id"
+        private const val KEY_PRE_KEYS_UPLOADED = "pre_keys_uploaded"
     }
 }

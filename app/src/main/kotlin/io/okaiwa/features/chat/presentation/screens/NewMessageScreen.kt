@@ -132,12 +132,12 @@ fun NewMessageScreen(
         DiscoveryResultRow(
             state = discoveryState,
             onStartConversation = { user ->
-                // accountId is the deviceId target on the relay; we'll
-                // upgrade to a true Conversation entity once Signal
-                // session establishment is wired. For now we re-use
-                // the existing onStartConversation hook so the chat
-                // screen opens against the discovered identity.
-                onStartConversation(user.accountId)
+                // Persist the conversation row (peerDeviceId + identity
+                // key + registration id) through the chat repository,
+                // then navigate to the chat screen with the fresh id.
+                discoveryVm.startConversation(user) { conversationId ->
+                    onStartConversation(conversationId)
+                }
             },
         )
 

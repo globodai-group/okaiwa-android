@@ -2,6 +2,7 @@ package io.okaiwa.features.chat.domain.repositories
 
 import io.okaiwa.features.chat.domain.entities.Conversation
 import io.okaiwa.features.chat.domain.entities.Message
+import io.okaiwa.features.discovery.data.remote.DiscoveredUser
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -81,6 +82,15 @@ interface ChatRepository {
      * @return The created or existing [Conversation].
      */
     suspend fun createConversation(recipientUserId: String): Conversation
+
+    /**
+     * Create (or return) a 1:1 conversation directly from a discovery
+     * result. Preferred entry point because the [DiscoveredUser] carries
+     * the peer's deviceId + identityPublicKey + registrationId — all of
+     * which the session-establishment path needs but the legacy
+     * [createConversation] accessor can't supply.
+     */
+    suspend fun createConversationFromDiscovery(peer: DiscoveredUser): Conversation
 
     /**
      * Load older messages for pagination.

@@ -1,5 +1,6 @@
 package io.okaiwa.features.auth.data.repositories
 
+import android.util.Log
 import io.okaiwa.core.errors.AppError
 import io.okaiwa.core.errors.toAppError
 import io.okaiwa.features.auth.data.crypto.PhoneHasher
@@ -14,6 +15,10 @@ import io.okaiwa.features.auth.data.session.Session
 import io.okaiwa.features.auth.data.session.SessionStore
 import io.okaiwa.features.auth.domain.entities.User
 import io.okaiwa.features.auth.domain.repositories.AuthRepository
+import io.okaiwa.features.keys.data.remote.KeyApi
+import io.okaiwa.features.keys.data.remote.PreKeyDto
+import io.okaiwa.features.keys.data.remote.UploadPreKeysRequest
+import io.okaiwa.features.keys.data.remote.KyberPreKeyDto as WireKyberPreKeyDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import retrofit2.Response
@@ -46,6 +51,7 @@ import javax.inject.Singleton
 @Singleton
 class RemoteAuthRepository @Inject constructor(
     private val api: AuthApi,
+    private val keyApi: KeyApi,
     private val sessionStore: SessionStore,
     private val signalIdentityKeys: SignalIdentityKeys,
 ) : AuthRepository {
@@ -106,6 +112,12 @@ class RemoteAuthRepository @Inject constructor(
 
         persistSession(pending.accountId, pending.phoneHash, body)
 
+        // Upload the one-time pre-key batch + signed pre-key + kyber
+        // pre-key exactly once per account. Idempotent across cold
+        // starts — [SignalIdentityKeys.arePreKeysUploaded] reads the
+        // persisted flag from SignalIdentityStore.
+        uploadPreKeysOnce(accessToken = body.sessionToken)
+
         return Session(
             accountId = pending.accountId,
             phoneHash = pending.phoneHash,
@@ -116,6 +128,61 @@ class RemoteAuthRepository @Inject constructor(
             deviceToken = body.deviceToken ?: "",
             phoneE164 = pending.phoneE164,
         ).toUserStub()
+    }
+
+    /**
+     * Post the initial pre-key batch to `/v1/keys/prekeys`. We call this
+     * right after OTP verify succeeds — the relay peer lookup at
+     * `/v1/keys/prekey/:deviceId` won't return bundles until the OPKs
+     * are on the server, so this blocks chat until it lands (but the
+     * upload is fire-and-flag: a transient failure just leaves the
+     * flag unset and we retry on the next verify or a dedicated
+     * refill job).
+     *
+     * Idempotent: flag in SignalIdentityStore suppresses re-uploads.
+     */
+    /**
+     * App-level warmup hook — call from MainActivity.onCreate (or any
+     * scope that runs once per app launch when a session is already
+     * persisted). Lets pre-commit users (or anyone whose first
+     * upload failed transiently) push their kyber + OPK batch
+     * without having to re-run /auth/verify. Idempotent — gated by
+     * [SignalIdentityKeys.arePreKeysUploaded], so it's free to call
+     * eagerly on every cold start.
+     */
+    suspend fun ensurePreKeysUploaded() {
+        val accessToken = sessionStore.current()?.accessToken
+            ?.takeIf { it.isNotEmpty() } ?: return
+        uploadPreKeysOnce(accessToken)
+    }
+
+    private suspend fun uploadPreKeysOnce(accessToken: String) {
+        if (signalIdentityKeys.arePreKeysUploaded()) return
+        val batch = signalIdentityKeys.uploadBatch()
+
+        val payload = UploadPreKeysRequest(
+            preKeys = batch.oneTimePreKeys.map { PreKeyDto(it.keyId, it.publicKey) },
+            signedPreKey = batch.signedPreKey,
+            kyberPreKey = WireKyberPreKeyDto(
+                keyId = batch.kyberPreKey.keyId,
+                publicKey = batch.kyberPreKey.publicKey,
+                signature = batch.kyberPreKey.signature,
+            ),
+        )
+
+        val response = runCatching {
+            keyApi.uploadPreKeys(bearer = "Bearer $accessToken", body = payload)
+        }.getOrElse {
+            Log.w(TAG, "prekey upload threw — will retry on next verify: ${it::class.simpleName}")
+            return
+        }
+
+        if (response.isSuccessful) {
+            signalIdentityKeys.markPreKeysUploaded()
+            Log.d(TAG, "prekeys uploaded (${batch.oneTimePreKeys.size} OPKs)")
+        } else {
+            Log.w(TAG, "prekey upload HTTP ${response.code()} — flag not set, will retry")
+        }
     }
 
     /**
@@ -227,6 +294,10 @@ class RemoteAuthRepository @Inject constructor(
             }
         }
         return body() ?: throw AppError.Server.Http(code(), "Empty body from ${endpoint()}")
+    }
+
+    private companion object {
+        private const val TAG = "RemoteAuthRepo"
     }
 
     /**

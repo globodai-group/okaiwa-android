@@ -104,6 +104,50 @@ object AppModule {
         retrofit: Retrofit,
     ): io.okaiwa.features.profile.data.remote.ProfileApi =
         retrofit.create(io.okaiwa.features.profile.data.remote.ProfileApi::class.java)
+
+    // ────────────────────────────────────────────────────────────────
+    // Real-world E2E messaging: KeyApi (identity service, Bearer access
+    // token) + RelayApi (relay service, Bearer deviceToken — SAME host).
+    // ────────────────────────────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    fun provideKeyApi(
+        retrofit: Retrofit,
+    ): io.okaiwa.features.keys.data.remote.KeyApi =
+        retrofit.create(io.okaiwa.features.keys.data.remote.KeyApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRelayApi(
+        retrofit: Retrofit,
+    ): io.okaiwa.features.chat.data.remote.RelayApi =
+        retrofit.create(io.okaiwa.features.chat.data.remote.RelayApi::class.java)
+
+    // ────────────────────────────────────────────────────────────────
+    // Encrypted local store: Room + SQLCipher. Passphrase comes from
+    // an EncryptedSharedPreferences-backed AES-256/GCM MasterKey (see
+    // OkaiwaDatabase.loadOrGeneratePassphrase).
+    // ────────────────────────────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    fun provideOkaiwaDatabase(
+        @ApplicationContext context: Context,
+    ): io.okaiwa.features.chat.data.local.OkaiwaDatabase =
+        io.okaiwa.features.chat.data.local.OkaiwaDatabase.build(context)
+
+    @Provides
+    @Singleton
+    fun provideConversationDao(
+        db: io.okaiwa.features.chat.data.local.OkaiwaDatabase,
+    ): io.okaiwa.features.chat.data.local.ConversationDao = db.conversationDao()
+
+    @Provides
+    @Singleton
+    fun provideMessageDao(
+        db: io.okaiwa.features.chat.data.local.OkaiwaDatabase,
+    ): io.okaiwa.features.chat.data.local.MessageDao = db.messageDao()
 }
 
 /**
@@ -125,16 +169,15 @@ abstract class RepositoryModule {
         impl: io.okaiwa.features.auth.data.repositories.RemoteAuthRepository
     ): AuthRepository
 
-    // Wired to the mock while the relay service + Signal Protocol FFI
-    // are still under construction. The mock serves a realistic
-    // conversation graph so the whole UX can be test-driven before the
-    // real HTTP + WebSocket client lands. Swap back to
-    // `StubChatRepository` or a production impl by changing this single
-    // line.
+    // Swapped to the production path — speaks to the identity service
+    // (KeyApi for PreKey bundle exchange) + the relay (RelayApi for
+    // ciphertext store-and-forward) + libsignal 0.86 (SessionBuilder /
+    // SessionCipher) + Room/SQLCipher for the on-device message store.
+    // MockChatRepository is kept around as a reference for unit tests.
     @dagger.Binds
     @Singleton
     abstract fun bindChatRepository(
-        impl: io.okaiwa.features.chat.data.repositories.MockChatRepository
+        impl: io.okaiwa.features.chat.data.repositories.RemoteChatRepository
     ): ChatRepository
 
     @dagger.Binds

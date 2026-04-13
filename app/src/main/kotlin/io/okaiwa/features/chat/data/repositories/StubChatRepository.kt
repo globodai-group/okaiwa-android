@@ -71,6 +71,10 @@ class StubChatRepository @Inject constructor() : ChatRepository {
         throw NotImplementedError("Conversation creation requires identity service wiring")
     }
 
+    override suspend fun createConversationFromDiscovery(
+        peer: io.okaiwa.features.discovery.data.remote.DiscoveredUser,
+    ): Conversation = throw NotImplementedError("Stub doesn't support discovery-based creation")
+
     override suspend fun loadOlderMessages(
         conversationId: String,
         beforeMessageId: String,

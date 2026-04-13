@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import dagger.hilt.android.AndroidEntryPoint
 import io.okaiwa.core.navigation.AppNavigation
 import io.okaiwa.core.theme.OkaiwaTheme
+import io.okaiwa.features.chat.data.MessagePollingService
+import javax.inject.Inject
 
 /**
  * Main activity for Okaiwa.
@@ -30,6 +32,14 @@ import io.okaiwa.core.theme.OkaiwaTheme
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
+    /**
+     * Pulls pending messages from the relay on a 5 s cadence while the
+     * activity is in foreground. Lifecycle-scoped so we don't drain
+     * battery when the user is on another app — FCM silent push will
+     * take over background delivery in a follow-up commit.
+     */
+    @Inject lateinit var messagePollingService: MessagePollingService
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -44,5 +54,15 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        messagePollingService.start()
+    }
+
+    override fun onPause() {
+        messagePollingService.stop()
+        super.onPause()
     }
 }

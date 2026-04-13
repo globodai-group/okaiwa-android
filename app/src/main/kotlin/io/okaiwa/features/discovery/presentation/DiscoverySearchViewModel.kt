@@ -3,6 +3,7 @@ package io.okaiwa.features.discovery.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.okaiwa.features.chat.domain.repositories.ChatRepository
 import io.okaiwa.features.discovery.data.remote.DiscoveredUser
 import io.okaiwa.features.discovery.data.remote.DiscoveryApi
 import kotlinx.coroutines.Job
@@ -29,6 +30,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DiscoverySearchViewModel @Inject constructor(
     private val discoveryApi: DiscoveryApi,
+    private val chatRepository: ChatRepository,
 ) : ViewModel() {
 
     sealed interface State {
@@ -78,5 +80,21 @@ class DiscoverySearchViewModel @Inject constructor(
     fun clear() {
         debounceJob?.cancel()
         _state.value = State.Idle
+    }
+
+    /**
+     * Persist a conversation row for the discovery hit and invoke
+     * [onReady] with the fresh (or pre-existing) conversation id. The
+     * actual Signal session is established lazily on the first send —
+     * see [io.okaiwa.features.chat.data.repositories.RemoteChatRepository.sendMessage].
+     */
+    fun startConversation(user: DiscoveredUser, onReady: (conversationId: String) -> Unit) {
+        viewModelScope.launch {
+            runCatching { chatRepository.createConversationFromDiscovery(user) }
+                .onSuccess { conv -> onReady(conv.id) }
+                .onFailure { t ->
+                    _state.value = State.Error(t.message ?: "Impossible de démarrer la conversation")
+                }
+        }
     }
 }
