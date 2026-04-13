@@ -30,7 +30,7 @@ plugins {
  * back to 1 so the build still succeeds.
  */
 val okaiwaMajor = 1
-val okaiwaMinor = 0
+val okaiwaMinor = 5
 val okaiwaVersionCode: Int = runCatching {
     val stdout = ByteArrayOutputStream()
     exec {
