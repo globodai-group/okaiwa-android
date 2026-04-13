@@ -80,7 +80,7 @@ biometric = { group = "androidx.biometric", name = "biometric", version.ref = "b
 # Security — EncryptedSharedPreferences for the session token store.
 # The AndroidX Keystore-backed MasterKey wraps AES-256/GCM so the
 # access + refresh tokens never hit disk in plaintext.
-security-crypto = { group = "androidx.security", name = "security-crypto", version = "1.1.0-alpha06" }
+security-crypto = { group = "androidx.security", name = "security-crypto", version = "1.1.0" }
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
