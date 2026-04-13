@@ -5,7 +5,7 @@ ksp = "2.3.6"
 # Hilt 2.59+ requires AGP 9. Pinned to 2.56.2, the last release that
 # still works on AGP 8.5 — bump together with AGP 9 + Gradle 9 in a
 # coordinated toolchain upgrade sprint.
-hilt = "2.56.2"
+hilt = "2.58"
 compose-bom = "2024.12.01"
 compose-navigation = "2.9.7"
 lifecycle = "2.10.0"
