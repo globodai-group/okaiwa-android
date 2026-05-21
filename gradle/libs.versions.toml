@@ -34,7 +34,7 @@ libsignal = "0.86.5"
 # Hosted on GitHub Packages (https://maven.pkg.github.com/trustwallet/wallet-core),
 # NOT Maven Central — resolution requires a GITHUB_TOKEN with read:packages scope.
 # See settings.gradle.kts for the repo declaration.
-wallet-core = "4.3.5"
+wallet-core = "4.6.9"
 # D8 core library desugaring — backports java.time.* and other Java 8+ APIs
 # so libsignal-android (which targets minSdk 26 but relies on Instant etc.)
 # can run on the full minSdk = 26 surface through D8's synthesised stubs.
