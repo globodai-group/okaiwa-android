@@ -15,6 +15,10 @@ jobs:
     name: Build, Lint & Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      # Required to read com.trustwallet:wallet-core from GitHub Packages.
+      packages: read
 
     steps:
       - name: Checkout
@@ -33,12 +37,24 @@ jobs:
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
+        env:
+          # settings.gradle.kts resolves com.trustwallet:wallet-core from
+          # GitHub Packages, which requires authentication even for public
+          # artifacts. The built-in GITHUB_TOKEN has read:packages scope.
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Lint
         run: ./gradlew lintDebug --no-daemon
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --no-daemon
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload lint results
         if: always()
