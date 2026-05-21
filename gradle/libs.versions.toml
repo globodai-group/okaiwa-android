@@ -17,13 +17,13 @@ serialization = "1.11.0"
 datastore = "1.2.1"
 biometric = "1.4.0-alpha06"
 firebase-bom = "33.7.0"
-sqlcipher = "4.14.1"
+sqlcipher = "4.16.0"
 activity-compose = "1.13.0"
 core-ktx = "1.18.0"
 # AppCompat — only pulled in for AppCompatDelegate.setApplicationLocales,
 # which is the pre-T compatibility shim behind the in-app language picker
 # (Android 13+ routes through the framework's LocaleManager on its own).
-appcompat = "1.7.0"
+appcompat = "1.7.1"
 google-services = "4.4.4"
 credentials = "1.6.0"
 # Signal Foundation libsignal — Signal Protocol (Curve25519 + Double Ratchet + PQXDH).
