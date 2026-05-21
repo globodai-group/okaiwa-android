@@ -1,7 +1,7 @@
 [versions]
 agp = "8.9.2"
-kotlin = "2.3.20"
-ksp = "2.3.6"
+kotlin = "2.3.21"
+ksp = "2.3.8"
 # Hilt 2.59+ requires AGP 9. Pinned to 2.56.2, the last release that
 # still works on AGP 8.5 — bump together with AGP 9 + Gradle 9 in a
 # coordinated toolchain upgrade sprint.
