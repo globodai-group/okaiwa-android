@@ -1,29 +1,29 @@
 [versions]
-agp = "8.9.2"
-kotlin = "2.3.20"
-ksp = "2.3.6"
-# Hilt 2.59+ requires AGP 9. Pinned to 2.56.2, the last release that
-# still works on AGP 8.5 — bump together with AGP 9 + Gradle 9 in a
+agp = "8.13.2"
+kotlin = "2.3.21"
+ksp = "2.3.8"
+# Hilt 2.59+ requires AGP 9. Pinned to 2.58, the last release that
+# still works on AGP 8.x — bump together with AGP 9 + Gradle 9 in a
 # coordinated toolchain upgrade sprint.
 hilt = "2.58"
-compose-bom = "2024.12.01"
-compose-navigation = "2.9.7"
+compose-bom = "2026.05.01"
+compose-navigation = "2.9.8"
 lifecycle = "2.10.0"
 room = "2.8.4"
-retrofit = "2.11.0"
+retrofit = "3.0.0"
 okhttp = "4.12.0"
-coroutines = "1.10.2"
+coroutines = "1.11.0"
 serialization = "1.11.0"
 datastore = "1.2.1"
 biometric = "1.4.0-alpha06"
-firebase-bom = "33.7.0"
-sqlcipher = "4.14.1"
+firebase-bom = "34.13.0"
+sqlcipher = "4.16.0"
 activity-compose = "1.13.0"
 core-ktx = "1.18.0"
 # AppCompat — only pulled in for AppCompatDelegate.setApplicationLocales,
 # which is the pre-T compatibility shim behind the in-app language picker
 # (Android 13+ routes through the framework's LocaleManager on its own).
-appcompat = "1.7.0"
+appcompat = "1.7.1"
 google-services = "4.4.4"
 credentials = "1.6.0"
 # Signal Foundation libsignal — Signal Protocol (Curve25519 + Double Ratchet + PQXDH).
@@ -34,11 +34,21 @@ libsignal = "0.86.5"
 # Hosted on GitHub Packages (https://maven.pkg.github.com/trustwallet/wallet-core),
 # NOT Maven Central — resolution requires a GITHUB_TOKEN with read:packages scope.
 # See settings.gradle.kts for the repo declaration.
-wallet-core = "4.3.5"
+wallet-core = "4.6.9"
 # D8 core library desugaring — backports java.time.* and other Java 8+ APIs
 # so libsignal-android (which targets minSdk 26 but relies on Instant etc.)
 # can run on the full minSdk = 26 surface through D8's synthesised stubs.
 desugar = "2.1.5"
+# protobuf-javalite — NOT a direct dependency. Trust Wallet's
+# wallet-core-proto pulls in protobuf-javalite 3.22.3 transitively, which
+# is exposed to CVE-2024-7254 (GHSA-735f-pc8j-v9w8, HIGH — unbounded
+# recursion DoS on crafted messages). Forced up to 3.25.5, the first
+# patched release. Kept on the 3.x series (not 4.x): the protobuf LITE
+# runtime API is explicitly unstable across minor versions, and
+# wallet-core-proto's generated lite gencode targets 3.22 — 3.25 is the
+# nearest patched runtime within the same series. Remove this pin once
+# wallet-core ships protobuf-javalite >= 3.25.5 itself.
+protobuf-javalite = "3.25.5"
 
 [libraries]
 # Compose
@@ -91,7 +101,11 @@ security-crypto = { group = "androidx.security", name = "security-crypto", versi
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
-firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
+# firebase-messaging — the standalone -ktx artifacts were folded into the
+# main modules and removed from the BOM in Firebase BOM 34.x. App code
+# only uses FirebaseMessagingService + RemoteMessage (core classes), so
+# no KTX extension APIs are lost by dropping the -ktx suffix.
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 # AndroidX Core
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
@@ -114,6 +128,10 @@ wallet-core = { group = "com.trustwallet", name = "wallet-core", version.ref = "
 
 # Core library desugaring runtime — required by libsignal-android.
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
+
+# protobuf-javalite — used only as a constraint target to evict the
+# CVE-2024-7254 vulnerable 3.22.3 transitive (see version note above).
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf-javalite" }
 
 # Testing
 junit = { group = "junit", name = "junit", version = "4.13.2" }

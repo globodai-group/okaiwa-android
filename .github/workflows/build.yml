@@ -15,6 +15,10 @@ jobs:
     name: Build, Lint & Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      # Required to read com.trustwallet:wallet-core from GitHub Packages.
+      packages: read
 
     steps:
       - name: Checkout
@@ -31,14 +35,38 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/dev' }}
 
+      # google-services.json is gitignored (Firebase config — never
+      # committed). The Google Services Gradle plugin aborts the build
+      # without it. Materialise it from the GOOGLE_SERVICES_JSON repo
+      # secret (base64-encoded). Until that secret is created the step is
+      # a no-op and the build still fails at processDebugGoogleServices —
+      # see PR notes.
+      - name: Write google-services.json
+        if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
+
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
+        env:
+          # settings.gradle.kts resolves com.trustwallet:wallet-core from
+          # GitHub Packages, which requires authentication even for public
+          # artifacts. The built-in GITHUB_TOKEN has read:packages scope.
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Lint
         run: ./gradlew lintDebug --no-daemon
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --no-daemon
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload lint results
         if: always()
