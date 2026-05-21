@@ -35,6 +35,18 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/dev' }}
 
+      # google-services.json is gitignored (Firebase config — never
+      # committed). The Google Services Gradle plugin aborts the build
+      # without it. Materialise it from the GOOGLE_SERVICES_JSON repo
+      # secret (base64-encoded). Until that secret is created the step is
+      # a no-op and the build still fails at processDebugGoogleServices —
+      # see PR notes.
+      - name: Write google-services.json
+        if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
+
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
         env:
