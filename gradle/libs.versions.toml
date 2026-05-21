@@ -6,8 +6,8 @@ ksp = "2.3.8"
 # still works on AGP 8.5 — bump together with AGP 9 + Gradle 9 in a
 # coordinated toolchain upgrade sprint.
 hilt = "2.58"
-compose-bom = "2024.12.01"
-compose-navigation = "2.9.7"
+compose-bom = "2026.05.01"
+compose-navigation = "2.9.8"
 lifecycle = "2.10.0"
 room = "2.8.4"
 retrofit = "2.11.0"
