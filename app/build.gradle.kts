@@ -144,6 +144,17 @@ android {
 }
 
 dependencies {
+    // ── Security constraints ──────────────────────────────────────────
+    // Evict the CVE-2024-7254 (GHSA-735f-pc8j-v9w8, HIGH) vulnerable
+    // protobuf-javalite 3.22.3 that com.trustwallet:wallet-core-proto
+    // drags in transitively. The constraint bumps it to the first
+    // patched release without adding protobuf as a direct dependency.
+    constraints {
+        implementation(libs.protobuf.javalite) {
+            because("CVE-2024-7254: unbounded-recursion DoS in protobuf-javalite < 3.25.5")
+        }
+    }
+
     // Compose BOM
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)

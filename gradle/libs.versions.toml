@@ -39,6 +39,16 @@ wallet-core = "4.6.9"
 # so libsignal-android (which targets minSdk 26 but relies on Instant etc.)
 # can run on the full minSdk = 26 surface through D8's synthesised stubs.
 desugar = "2.1.5"
+# protobuf-javalite — NOT a direct dependency. Trust Wallet's
+# wallet-core-proto pulls in protobuf-javalite 3.22.3 transitively, which
+# is exposed to CVE-2024-7254 (GHSA-735f-pc8j-v9w8, HIGH — unbounded
+# recursion DoS on crafted messages). Forced up to 3.25.5, the first
+# patched release. Kept on the 3.x series (not 4.x): the protobuf LITE
+# runtime API is explicitly unstable across minor versions, and
+# wallet-core-proto's generated lite gencode targets 3.22 — 3.25 is the
+# nearest patched runtime within the same series. Remove this pin once
+# wallet-core ships protobuf-javalite >= 3.25.5 itself.
+protobuf-javalite = "3.25.5"
 
 [libraries]
 # Compose
@@ -118,6 +128,10 @@ wallet-core = { group = "com.trustwallet", name = "wallet-core", version.ref = "
 
 # Core library desugaring runtime — required by libsignal-android.
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
+
+# protobuf-javalite — used only as a constraint target to evict the
+# CVE-2024-7254 vulnerable 3.22.3 transitive (see version note above).
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf-javalite" }
 
 # Testing
 junit = { group = "junit", name = "junit", version = "4.13.2" }
