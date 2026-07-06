@@ -1,30 +1,30 @@
 [versions]
 agp = "8.9.2"
-kotlin = "2.3.20"
-ksp = "2.3.6"
+kotlin = "2.4.0"
+ksp = "2.3.9"
 # Hilt 2.59+ requires AGP 9. Pinned to 2.56.2, the last release that
 # still works on AGP 8.5 — bump together with AGP 9 + Gradle 9 in a
 # coordinated toolchain upgrade sprint.
-hilt = "2.58"
+hilt = "2.60"
 compose-bom = "2024.12.01"
-compose-navigation = "2.9.7"
-lifecycle = "2.10.0"
+compose-navigation = "2.9.8"
+lifecycle = "2.11.0"
 room = "2.8.4"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
-coroutines = "1.10.2"
+coroutines = "1.11.0"
 serialization = "1.11.0"
 datastore = "1.2.1"
 biometric = "1.4.0-alpha06"
 firebase-bom = "33.7.0"
-sqlcipher = "4.14.1"
+sqlcipher = "4.16.0"
 activity-compose = "1.13.0"
-core-ktx = "1.18.0"
+core-ktx = "1.19.0"
 # AppCompat — only pulled in for AppCompatDelegate.setApplicationLocales,
 # which is the pre-T compatibility shim behind the in-app language picker
 # (Android 13+ routes through the framework's LocaleManager on its own).
-appcompat = "1.7.0"
-google-services = "4.4.4"
+appcompat = "1.7.1"
+google-services = "4.5.0"
 credentials = "1.6.0"
 # Signal Foundation libsignal — Signal Protocol (Curve25519 + Double Ratchet + PQXDH).
 # 0.76.7 is the latest tagged release on Maven Central (org.signal:libsignal-android).
@@ -59,7 +59,7 @@ lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmode
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.3.0" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.4.0" }
 
 # Network
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
